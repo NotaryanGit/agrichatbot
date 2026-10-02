@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Agri-Pulse | KrishiMitra Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- GSAP for bloom animation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    /* ---------- design tokens ---------- */
+    :root {
+      --cream: #F4EDE4;
+      --wheat: #E8DCC8;
+      --soil: #3D2B1F;
+      --green: #4A7C59;
+      --green-light: #7FB069;
+      --green-dark: #2F523A;
+      --accent: #D4A373;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body,
+    #root {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--cream);
+      color: var(--soil);
+    }
+
+    /* dot texture background */
+    .bg-pattern {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M2 0h1v1H2zM0 2h1v1H0z' fill='%233d2b1f' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    /* ---------- splash ---------- */
+    .splash-page {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--cream);
+      background-image: inherit;
+      transition: opacity .5s ease, visibility .5s;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    .splash-page.exit {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-top: 1.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    .splash-hint {
+      margin-top: 0.5rem;
+      color: var(--soil);
+      opacity: .65;
+      font: .95rem/1.4 sans-serif;
+      text-align: center;
+    }
+
+    .dandelion-svg {
+      width: 180px;
+      height: 240px;
+    }
+
+    /* ---------- chat page ---------- */
+    .chat-page {
+      display: none;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      background: var(--cream);
+      position: relative;
+      z-index: 5;
+    }
+
+    .chat-page.active {
+      display: grid;
+    }
+
+    .chat-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      overflow: hidden;
+      height: calc(100vh - 60px);
+    }
+
+    /* sidebar */
+    .sidebar {
+      background: var(--wheat);
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .08);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow-y: auto;
+    }
+
+    .new-chat-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      font-size: 0.9rem;
+    }
+
+    .new-chat-btn:hover {
+      background: var(--green-dark);
+    }
+
+    .new-chat-btn:active {
+      transform: scale(0.98);
+    }
+
+    .sidebar-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--soil);
+      opacity: 0.5;
+      margin-top: 1rem;
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.5px;
+    }
+
+    .history-item {
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+      padding: .6rem .75rem;
+      border-radius: .75rem;
+      cursor: pointer;
+      transition: all .2s;
+      border: 1px solid transparent;
+    }
+
+    .history-item:hover {
+      background: rgba(74, 124, 89, .12);
+      border-color: rgba(74, 124, 89, .2);
+    }
+
+    .history-title {
+      font-weight: 600;
+      font-size: .85rem;
+      color: var(--soil);
+    }
+
+    .history-preview {
+      font-size: .75rem;
+      color: var(--soil);
+      opacity: .65;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* chat main area */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      min-width: 0;
+      height: 100%;
+      position: relative;
+    }
+
+    /* header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .75rem 1.25rem;
+      background: var(--cream);
+      border-bottom: 1px solid rgba(61, 43, 31, .08);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--green-dark);
+    }
+
+    .badge-live {
+      font-size: 0.65rem;
+      background: var(--green-light);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--soil);
+      opacity: .7;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 6px;
+      border-radius: 50%;
+      transition: all .2s;
+    }
+
+    .icon-btn:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* message bubbles */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: .75rem 1rem;
+      border-radius: 1rem;
+      line-height: 1.5;
+      font-size: .92rem;
+      animation: fadeIn .3s ease;
+      word-break: break-word;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--green);
+      color: #fff;
+      border-bottom-right-radius: .25rem;
+      box-shadow: 0 2px 8px -2px rgba(74, 124, 89, .3);
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      background: #fff;
+      color: var(--soil);
+      border-bottom-left-radius: .25rem;
+      box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .08);
+    }
+
+    .msg.bot p {
+      margin-bottom: 0.5rem;
+    }
+
+    .msg.bot p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Sources badge and card */
+    .sources-container {
+      margin-top: 0.6rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed rgba(61, 43, 31, 0.15);
+      font-size: 0.8rem;
+    }
+
+    .sources-header {
+      font-weight: 600;
+      color: var(--green-dark);
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .source-item {
+      background: var(--cream);
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      border-left: 3px solid var(--green);
+      color: var(--soil);
+    }
+
+    /* input area */
+    .input-wrap {
+      display: flex;
+      gap: .5rem;
+      padding: .75rem 1rem;
+      background: var(--cream);
+      border-top: 1px solid rgba(61, 43, 31, .08);
+      position: relative;
+    }
+
+    .input-field {
+      flex: 1;
+      padding: .75rem 1.25rem;
+      border: 1px solid rgba(61, 43, 31, .15);
+      border-radius: 2rem;
+      background: #fff;
+      font: inherit;
+      color: var(--soil);
+      box-shadow: 0 2px 6px -2px rgba(0, 0, 0, .06);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--green);
+    }
+
+    .send-btn {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: var(--green-dark);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* KrishiMitra mascot */
+    .krishi-mitra {
+      position: absolute;
+      right: 1.5rem;
+      bottom: 5rem;
+      width: 80px;
+      height: 120px;
+      pointer-events: none;
+      transition: transform .3s ease;
+      z-index: 3;
+    }
+
+    .krishi-mitra.idle {
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    .krishi-mitra.typing {
+      animation: bob .6s ease-in-out infinite;
+    }
+
+    .krishi-mitra.thinking {
+      animation: rock 1.2s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.02)
+      }
+    }
+
+    @keyframes bob {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-4px)
+      }
+    }
+
+    @keyframes rock {
+
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+
+      50% {
+        transform: rotate(2deg)
+      }
+    }
+
+    .pot-plant {
+      width: 100%;
+      height: 100%;
+    }
+
+    .leaves path {
+      transform-origin: center 70px;
+      animation: sway 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes sway {
+      from {
+        transform: rotate(-4deg)
+      }
+
+      to {
+        transform: rotate(4deg)
+      }
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 180px;
+      padding: .5rem .75rem;
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .1);
+      font: .78rem/1.3 sans-serif;
+      color: var(--soil);
+      text-align: center;
+    }
+
+    .bubble::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -6px;
+      border: 6px solid transparent;
+      border-top-color: #fff;
+    }
+
+    /* Loading dots indicator */
+    .typing-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dots span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+      }
+
+      40% {
+        transform: scale(1.0);
+      }
+    }
+
+    /* fade in helper */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+    <!-- Splash -->
+    <section class="splash-page bg-pattern" id="splash">
+      <svg class="dandelion-svg" viewBox="0 0 200 300" aria-hidden="true">
+        <path d="M100,180 Q100,260 100,280" stroke="#7A9E7E" stroke-width="2" fill="none" />
+        <path d="M100,210 Q80,210 85,225 Q100,215 115,225 Q100,215 100,210" fill="#7A9E7E" opacity="0.6" />
+        <g id="filaments" class="filaments"></g>
+        <circle id="centerDisc" cx="100" cy="100" r="6" fill="#FFFFFF" filter="drop-shadow(0 0 4px #FFF)" />
+      </svg>
+      <div class="splash-title">🌾 KrishiMitra</div>
+      <p class="splash-hint">AI-Powered Agricultural Assistant<br><strong>Click anywhere to begin</strong></p>
+    </section>
+
+    <!-- Chat page -->
+    <main class="chat-page bg-pattern" id="chatPage">
+      <header class="header">
+        <div class="wordmark">
+          🌱 KrishiMitra <span class="badge-live">Online RAG</span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" title="About"
+            onclick="alert('KrishiMitra connects Indian agricultural datasets with Groq Llama 3.3 for reliable farming insights.')">ℹ️</button>
+        </div>
+      </header>
+
+      <div class="chat-grid">
+        <aside class="sidebar">
+          <button class="new-chat-btn" id="newChatBtn">
+            ➕ New Conversation
+          </button>
+
+          <div class="sidebar-section-title">Suggested Topics</div>
+
+          <div class="history-item" onclick="askPreset('What is the yield of Rice in Haryana during Kharif season?')">
+            <div class="history-title">🌾 Rice Yield (Haryana)</div>
+            <div class="history-preview">Kharif season production data</div>
+          </div>
+
+          <div class="history-item" onclick="askPreset('What crops are suitable for Punjab state?')">
+            <div class="history-title">🚜 Punjab Agriculture</div>
+            <div class="history-preview">Wheat, cotton & paddy crop stats</div>
+          </div>
+
+          <div class="history-item"
+            onclick="askPreset('What are effective organic pest management methods for vegetables?')">
+            <div class="history-title">🐛 Organic Pest Control</div>
+            <div class="history-preview">Neem oil & natural sprays</div>
+          </div>
+        </aside>
+
+        <section class="chat-area">
+          <div class="messages" id="messages">
+            <div class="msg bot">
+              <p>🙏 <strong>Namaste!</strong> I am <strong>KrishiMitra</strong>, your agricultural assistant.</p>
+              <p>You can ask me questions about crop yields, seasonal trends, districts, or sustainable farming
+                practices across India.</p>
+            </div>
+          </div>
+
+          <div class="input-wrap">
+            <input class="input-field" id="userInput" placeholder="Ask about crops, yields, seasons, states…"
+              aria-label="Your question" autocomplete="off">
+            <button class="send-btn" id="sendBtn" aria-label="Send">➤</button>
+          </div>
+
+          <!-- KrishiMitra mascot -->
+          <div class="krishi-mitra idle" id="mascot" aria-hidden="true">
+            <svg class="pot-plant" viewBox="0 0 80 120">
+              <defs>
+                <linearGradient id="potGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#E8DCC8" />
+                  <stop offset="100%" stop-color="#D4C4A8" />
+                </linearGradient>
+              </defs>
+              <path d="M10,110 L10,80 Q10,70 20,70 L60,70 Q70,70 70,80 L70,110 Z" fill="url(#potGrad)" stroke="#3D2B1F"
+                stroke-width="1" />
+              <g class="leaves">
+                <path d="M40,70 Q30,40 40,30 Q50,40 40,70" fill="#7FB069" />
+                <path d="M40,70 Q55,45 65,35 Q55,55 40,70" fill="#4A7C59" />
+              </g>
+            </svg>
+            <div class="bubble greeting">Namaste! Ask me anything about farming.</div>
+            <div class="bubble tip" style="display:none;">Rotate crops each season for healthier soil.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    /* ---------- Dandelion Bloom Splash Animation ---------- */
+    const filaments = document.getElementById('filaments');
+    const centerDisc = document.getElementById('centerDisc');
+    const splash = document.getElementById('splash');
+    const chatPage = document.getElementById('chatPage');
+
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2;
+      const len = 55 + Math.random() * 10;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 100);
+      line.setAttribute('y1', 100);
+      line.setAttribute('x2', 100 + Math.cos(angle) * len);
+      line.setAttribute('y2', 100 + Math.sin(angle) * len);
+      line.setAttribute('stroke', '#FFFFFF');
+      line.setAttribute('stroke-width', '1.2');
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('filter', 'drop-shadow(0 0 1px rgba(255,255,255,0.8))');
+      filaments.appendChild(line);
+    }
+
+    gsap.to(filaments, {
+      rotation: "±3", transformOrigin: "center bottom", duration: 3, repeat: -1, yoyo: true, ease: "sine.inOut"
+    });
+    gsap.to(filaments, { opacity: 0.6, duration: 1.2, repeat: -1, yoyo: true, ease: "power1.inOut" });
+
+    function bloom() {
+      gsap.timeline()
+        .to(filaments, {
+          scale: 2.5, y: -120, opacity: 0,
+          stagger: { each: 0.01, from: "center" },
+          duration: 0.7, ease: "power2.out"
+        })
+        .to(centerDisc, { fill: "#FFF7E6", filter: "drop-shadow(0 0 12px #FFF7E6)", duration: 0.4 }, "-=0.5");
+    }
+
+    function enterChat() {
+      bloom();
+      splash.classList.add('exit');
+      setTimeout(() => {
+        splash.style.display = 'none';
+        chatPage.classList.add('active');
+        document.getElementById('userInput').focus();
+      }, 500);
+    }
+    splash.addEventListener('click', enterChat);
+    splash.addEventListener('keydown', e => { if (e.key === 'Enter') enterChat(); });
+
+    /* ---------- Real RAG Chat Logic ---------- */
+    const input = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const messages = document.getElementById('messages');
+    const mascot = document.getElementById('mascot');
+    const tipBubble = mascot.querySelector('.tip');
+    const greetingBubble = mascot.querySelector('.greeting');
+    const newChatBtn = document.getElementById('newChatBtn');
+
+    let chatHistory = [];
+    let typingTimer;
+
+    input.addEventListener('input', () => {
+      mascot.className = 'krishi-mitra typing';
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => { mascot.className = 'krishi-mitra idle'; }, 800);
+    });
+
+    sendBtn.addEventListener('click', () => handleSend());
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+
+    newChatBtn.addEventListener('click', () => {
+      chatHistory = [];
+      messages.innerHTML = `
+    <div class="msg bot">
+      <p>🙏 <strong>Namaste!</strong> New conversation started.</p>
+      <p>How can I help you today with your crops or farm?</p>
+    </div>
+  `;
+      input.focus();
+    });
+
+    function askPreset(question) {
+      input.value = question;
+      handleSend();
+    }
+
+    async function handleSend() {
+      const txt = input.value.trim();
+      if (!txt) return;
+
+      // Append user message
+      appendMsg(txt, 'user');
+      input.value = '';
+      input.disabled = true;
+      sendBtn.disabled = true;
+      mascot.className = 'krishi-mitra thinking';
+
+      // Add temporary loading indicator bubble
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'msg bot';
+      loadingDiv.id = 'loadingMsg';
+      loadingDiv.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span> Asking KrishiMitra…';
+      messages.appendChild(loadingDiv);
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: txt,
+            history: chatHistory
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server error (${response.status})`);
+        }
+
+        const data = await response.json();
+
+        // Remove loading indicator
+        loadingDiv.remove();
+
+        // Append AI response
+        appendBotMsg(data.answer, data.sources || []);
+
+        // Update conversational memory
+        chatHistory.push({ role: 'user', content: txt });
+        chatHistory.push({ role: 'assistant', content: data.answer });
+
+        // Show rotating tip on mascot
+        const tips = [
+          "Rotate crops each season for healthier soil.",
+          "Mulch conserves soil moisture & suppresses weeds.",
+          "Test soil nutrients every 2-3 years."
+        ];
+        tipBubble.textContent = tips[Math.floor(Math.random() * tips.length)];
+        tipBubble.style.display = 'block';
+        greetingBubble.style.display = 'none';
+
+      } catch (err) {
+        loadingDiv.remove();
+        appendMsg(`❌ Error: ${err.message}. Please verify the server is running.`, 'bot');
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        mascot.className = 'krishi-mitra idle';
+        input.focus();
+      }
+    }
+
+    function appendMsg(text, who) {
+      const div = document.createElement('div');
+      div.className = `msg ${who}`;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendBotMsg(answer, sources) {
+      const div = document.createElement('div');
+      div.className = 'msg bot';
+
+      // Format linebreaks nicely into paragraphs
+      const paragraphs = answer.split(/\n\n+/).filter(p => p.trim().length > 0);
+      let html = '';
+      paragraphs.forEach(p => {
+        html += `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
+      });
+
+      // Render sources if available
+      if (sources && sources.length > 0) {
+        html += `
+      <div class="sources-container">
+        <div class="sources-header">📚 Retrieved References:</div>
+    `;
+        sources.slice(0, 3).forEach(s => {
+          const cropInfo = s.crop && s.crop !== 'N/A' ? ` | Crop: ${escapeHtml(s.crop)}` : '';
+          const stateInfo = s.state && s.state !== 'N/A' ? ` | State: ${escapeHtml(s.state)}` : '';
+          html += `<div class="source-item"><strong>${escapeHtml(s.source)}</strong>${cropInfo}${stateInfo}</div>`;
+        });
+        html += `</div>`;
+      }
+
+      div.innerHTML = html;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>
