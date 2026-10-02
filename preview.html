@@ -3,734 +3,2091 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Agri-Pulse | KrishiMitra Assistant</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- GSAP for bloom animation -->
+  <title>KrishiMitra (Agri-Pulse) — Intelligent Agricultural AI Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Award-winning Agricultural RAG Assistant powered by FAISS, Indian Agricultural Knowledge Base, and Groq Llama 3.3.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- Core Libraries: Three.js, GSAP, Lenis -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+
   <style>
-    /* ---------- design tokens ---------- */
+    /* ==========================================================================
+       1. DESIGN TOKENS & RESET
+       ========================================================================== */
     :root {
-      --cream: #F4EDE4;
-      --wheat: #E8DCC8;
-      --soil: #3D2B1F;
-      --green: #4A7C59;
-      --green-light: #7FB069;
-      --green-dark: #2F523A;
-      --accent: #D4A373;
+      --bg-cream: #FAF7F2;
+      --bg-wheat: #F3ECE1;
+      --bg-surface: #FFFFFF;
+      --soil-dark: #231F1C;
+      --soil-muted: #5C554F;
+      --soil-light: #8E847B;
+      
+      --green-primary: #2A5A44;
+      --green-leaf: #3E8E62;
+      --green-sage: #8AB89B;
+      --green-tint: #EBF4EE;
+      
+      --gold-primary: #D4A373;
+      --gold-light: #F9F1E6;
+      --gold-warm: #E29578;
+
+      --border-subtle: rgba(35, 31, 28, 0.08);
+      --border-focus: rgba(42, 90, 68, 0.35);
+      --shadow-sm: 0 2px 8px rgba(35, 31, 28, 0.04);
+      --shadow-md: 0 8px 24px -4px rgba(35, 31, 28, 0.08);
+      --shadow-lg: 0 20px 48px -12px rgba(35, 31, 28, 0.12);
+      --shadow-glow: 0 0 30px rgba(212, 163, 115, 0.3);
+
+      --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-heading: 'Outfit', sans-serif;
+      --font-serif: 'Playfair Display', Georgia, serif;
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
-      padding: 0
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    html,
-    body,
-    #root {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--cream);
-      color: var(--soil);
+    html {
+      font-size: 16px;
+      scroll-behavior: initial;
     }
 
-    /* dot texture background */
-    .bg-pattern {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M2 0h1v1H2zM0 2h1v1H0z' fill='%233d2b1f' opacity='0.04'/%3E%3C/svg%3E");
+    body {
+      background-color: var(--bg-cream);
+      color: var(--soil-dark);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
     }
 
-    /* ---------- splash ---------- */
-    .splash-page {
+    /* Subtle agricultural soil texture on main page */
+    .bg-texture {
       position: fixed;
       inset: 0;
+      background-image: radial-gradient(rgba(35, 31, 28, 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    /* Floating Seeds Canvas Background for Main Page */
+    #ambientSeedsCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.7;
+    }
+
+    /* ==========================================================================
+       2. 3D INTRO SCREEN (BLACK THEME • LUMINOUS WHITE PUFFBALL • NO STEM)
+       ========================================================================== */
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: radial-gradient(circle at 50% 50%, #151515 0%, #080808 60%, #000000 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      background: var(--cream);
-      background-image: inherit;
-      transition: opacity .5s ease, visibility .5s;
-      z-index: 10;
+      justify-content: space-between;
+      padding: 2.5rem 2rem;
       cursor: pointer;
+      user-select: none;
+      transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 1.2s;
     }
 
-    .splash-page.exit {
+    .intro-overlay.hidden {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
 
-    .splash-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: var(--green-dark);
-      margin-top: 1.5rem;
-      letter-spacing: -0.5px;
+    #dandelionCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
     }
 
-    .splash-hint {
-      margin-top: 0.5rem;
-      color: var(--soil);
-      opacity: .65;
-      font: .95rem/1.4 sans-serif;
+    .intro-header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .intro-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-heading);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: -0.02em;
+    }
+
+    .intro-brand .brand-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255, 255, 255, 0.12);
+      color: #A3E635;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .intro-center-info {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      max-width: 580px;
+      margin-top: auto;
+      margin-bottom: 2rem;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+
+    .intro-hint {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.75);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      padding: 8px 24px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+      animation: pulseFaint 3s infinite ease-in-out;
+    }
+
+    @keyframes pulseFaint {
+      0%, 100% {
+        opacity: 0.65;
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.08);
+      }
+      50% {
+        opacity: 0.95;
+        transform: scale(1.03);
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
+      }
+    }
+
+    .intro-footer {
+      position: relative;
+      z-index: 10;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
       text-align: center;
     }
 
-    .dandelion-svg {
-      width: 180px;
-      height: 240px;
-    }
-
-    /* ---------- chat page ---------- */
-    .chat-page {
-      display: none;
-      grid-template-rows: auto 1fr;
-      height: 100vh;
-      background: var(--cream);
-      position: relative;
+    /* Minimal Loader during 3D initialization */
+    .intro-loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: opacity 0.5s ease;
       z-index: 5;
     }
 
-    .chat-page.active {
-      display: grid;
+    .intro-loader.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
-    .chat-grid {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 1rem;
-      padding: 1rem;
-      overflow: hidden;
-      height: calc(100vh - 60px);
+    .loader-ring {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
 
-    /* sidebar */
-    .sidebar {
-      background: var(--wheat);
-      border-radius: 1rem;
-      padding: 1rem;
-      box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .08);
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      overflow-y: auto;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    .new-chat-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 0.75rem;
-      background: var(--green);
-      color: #fff;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s, transform .1s;
-      font-size: 0.9rem;
-    }
-
-    .new-chat-btn:hover {
-      background: var(--green-dark);
-    }
-
-    .new-chat-btn:active {
-      transform: scale(0.98);
-    }
-
-    .sidebar-section-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      color: var(--soil);
-      opacity: 0.5;
-      margin-top: 1rem;
-      margin-bottom: 0.25rem;
-      letter-spacing: 0.5px;
-    }
-
-    .history-item {
-      display: flex;
-      flex-direction: column;
-      gap: .2rem;
-      padding: .6rem .75rem;
-      border-radius: .75rem;
-      cursor: pointer;
-      transition: all .2s;
-      border: 1px solid transparent;
-    }
-
-    .history-item:hover {
-      background: rgba(74, 124, 89, .12);
-      border-color: rgba(74, 124, 89, .2);
-    }
-
-    .history-title {
-      font-weight: 600;
-      font-size: .85rem;
-      color: var(--soil);
-    }
-
-    .history-preview {
-      font-size: .75rem;
-      color: var(--soil);
-      opacity: .65;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* chat main area */
-    .chat-area {
-      display: flex;
-      flex-direction: column;
-      gap: .75rem;
-      min-width: 0;
-      height: 100%;
+    /* ==========================================================================
+       3. MAIN APPLICATION & NAVIGATION
+       ========================================================================== */
+    .app-wrapper {
       position: relative;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 1s ease;
     }
 
-    /* header */
-    .header {
+    .app-wrapper.visible {
+      opacity: 1;
+    }
+
+    /* Navigation */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+      background: rgba(250, 247, 242, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: all 0.3s ease;
+    }
+
+    .navbar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: .75rem 1.25rem;
-      background: var(--cream);
-      border-bottom: 1px solid rgba(61, 43, 31, .08);
-      position: sticky;
-      top: 0;
-      z-index: 5;
     }
 
-    .wordmark {
+    .logo-group {
       display: flex;
       align-items: center;
-      gap: .5rem;
-      font-weight: 700;
-      font-size: 1.15rem;
-      color: var(--green-dark);
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--soil-dark);
     }
 
-    .badge-live {
-      font-size: 0.65rem;
-      background: var(--green-light);
-      color: #fff;
-      padding: 2px 6px;
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--green-primary), var(--green-leaf));
       border-radius: 10px;
-      font-weight: bold;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .icon-btn {
-      background: none;
-      border: none;
-      color: var(--soil);
-      opacity: .7;
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 6px;
-      border-radius: 50%;
-      transition: all .2s;
-    }
-
-    .icon-btn:hover {
-      opacity: 1;
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    /* message bubbles */
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: .75rem;
-      scroll-behavior: smooth;
-    }
-
-    .msg {
-      max-width: 80%;
-      padding: .75rem 1rem;
-      border-radius: 1rem;
-      line-height: 1.5;
-      font-size: .92rem;
-      animation: fadeIn .3s ease;
-      word-break: break-word;
-    }
-
-    .msg.user {
-      align-self: flex-end;
-      background: var(--green);
-      color: #fff;
-      border-bottom-right-radius: .25rem;
-      box-shadow: 0 2px 8px -2px rgba(74, 124, 89, .3);
-    }
-
-    .msg.bot {
-      align-self: flex-start;
-      background: #fff;
-      color: var(--soil);
-      border-bottom-left-radius: .25rem;
-      box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .08);
-    }
-
-    .msg.bot p {
-      margin-bottom: 0.5rem;
-    }
-
-    .msg.bot p:last-child {
-      margin-bottom: 0;
-    }
-
-    /* Sources badge and card */
-    .sources-container {
-      margin-top: 0.6rem;
-      padding-top: 0.5rem;
-      border-top: 1px dashed rgba(61, 43, 31, 0.15);
-      font-size: 0.8rem;
-    }
-
-    .sources-header {
-      font-weight: 600;
-      color: var(--green-dark);
-      margin-bottom: 0.3rem;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .source-item {
-      background: var(--cream);
-      padding: 4px 8px;
-      border-radius: 6px;
-      margin-top: 4px;
-      font-size: 0.75rem;
-      border-left: 3px solid var(--green);
-      color: var(--soil);
-    }
-
-    /* input area */
-    .input-wrap {
-      display: flex;
-      gap: .5rem;
-      padding: .75rem 1rem;
-      background: var(--cream);
-      border-top: 1px solid rgba(61, 43, 31, .08);
-      position: relative;
-    }
-
-    .input-field {
-      flex: 1;
-      padding: .75rem 1.25rem;
-      border: 1px solid rgba(61, 43, 31, .15);
-      border-radius: 2rem;
-      background: #fff;
-      font: inherit;
-      color: var(--soil);
-      box-shadow: 0 2px 6px -2px rgba(0, 0, 0, .06);
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .input-field:focus {
-      border-color: var(--green);
-    }
-
-    .send-btn {
-      background: var(--green);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
-      transition: all .2s;
+      color: #fff;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(42, 90, 68, 0.25);
+    }
+
+    .logo-text {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span {
+      color: var(--green-primary);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--green-primary);
+      background: rgba(62, 142, 98, 0.12);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      margin-left: 0.5rem;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: #22C55E;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22C55E;
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+
+    .nav-link {
+      color: var(--soil-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      color: var(--green-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-replay-intro {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--soil-muted);
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-replay-intro:hover {
+      background: var(--bg-wheat);
+      color: var(--soil-dark);
+    }
+
+    .btn-launch-chat {
+      background: var(--green-primary);
+      color: #FFFFFF;
+      border: none;
+      padding: 10px 22px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 16px rgba(42, 90, 68, 0.25);
+    }
+
+    .btn-launch-chat:hover {
+      background: var(--green-leaf);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(42, 90, 68, 0.35);
+    }
+
+    /* ==========================================================================
+       4. HERO SECTION
+       ========================================================================== */
+    .hero-section {
+      padding: 5rem 2rem 4rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(212, 163, 115, 0.15);
+      border: 1px solid rgba(212, 163, 115, 0.3);
+      padding: 6px 16px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--soil-dark);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-heading {
+      font-family: var(--font-heading);
+      font-size: clamp(2.5rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      color: var(--soil-dark);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      max-width: 950px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .hero-heading em {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--green-primary);
+    }
+
+    .hero-subtext {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--soil-muted);
+      max-width: 680px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.6;
+    }
+
+    /* Hero Interactive Search Bar */
+    .hero-search-wrapper {
+      max-width: 720px;
+      margin: 0 auto 2rem;
+      position: relative;
+    }
+
+    .hero-search-box {
+      background: #FFFFFF;
+      border: 2px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 8px 10px 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-lg);
+      transition: all 0.3s ease;
+    }
+
+    .hero-search-box:focus-within {
+      border-color: var(--green-primary);
+      box-shadow: 0 12px 32px rgba(42, 90, 68, 0.15);
+    }
+
+    .hero-search-icon {
+      font-size: 1.2rem;
+      color: var(--green-primary);
+    }
+
+    .hero-search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      color: var(--soil-dark);
+      background: transparent;
+    }
+
+    .hero-search-input::placeholder {
+      color: var(--soil-light);
+    }
+
+    .hero-search-btn {
+      background: var(--green-primary);
+      color: #fff;
+      border: none;
+      padding: 12px 26px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-search-btn:hover {
+      background: var(--green-leaf);
+    }
+
+    /* Prompt chips */
+    .hero-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 3.5rem;
+    }
+
+    .prompt-chip {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--border-subtle);
+      color: var(--soil-dark);
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .prompt-chip:hover {
+      background: var(--green-tint);
+      border-color: var(--green-sage);
+      color: var(--green-primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Stats Grid */
+    .hero-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem 1.25rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(212, 163, 115, 0.4);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-num {
+      font-family: var(--font-heading);
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--green-primary);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--soil-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ==========================================================================
+       5. KNOWLEDGE BASE & TOPICS EXPLORER
+       ========================================================================== */
+    .section-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 3.5rem;
+    }
+
+    .section-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--gold-warm);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(2rem, 3.5vw, 2.75rem);
+      font-weight: 800;
+      color: var(--soil-dark);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--soil-muted);
+    }
+
+    .topics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .topic-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .topic-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--green-primary);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .topic-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--green-sage);
+    }
+
+    .topic-card:hover::before {
+      opacity: 1;
+    }
+
+    .topic-icon {
+      font-size: 2.2rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .topic-title {
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--soil-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    .topic-text {
+      font-size: 0.9rem;
+      color: var(--soil-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .topic-action {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--green-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    /* ==========================================================================
+       6. ARCHITECTURE FLOW SHOWCASE
+       ========================================================================== */
+    .arch-card {
+      background: linear-gradient(135deg, #FFFFFF 0%, var(--bg-wheat) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 3rem 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .arch-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      position: relative;
+    }
+
+    .arch-node {
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      text-align: center;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .arch-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: var(--gold-light);
+      color: var(--soil-dark);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-bottom: 0.75rem;
+    }
+
+    .arch-node-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--soil-dark);
+      margin-bottom: 0.35rem;
+    }
+
+    .arch-node-desc {
+      font-size: 0.8rem;
+      color: var(--soil-muted);
+    }
+
+    /* ==========================================================================
+       7. CUTE CHATBOT FLOATING WIDGET & MASCOT
+       ========================================================================== */
+    /* Floating Trigger Button */
+    .chat-widget-trigger {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .widget-bubble-hint {
+      background: #FFFFFF;
+      color: var(--soil-dark);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-subtle);
+      pointer-events: none;
+      animation: floatHint 3s infinite ease-in-out;
+      white-space: nowrap;
+    }
+
+    @keyframes floatHint {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .mascot-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-primary), var(--green-leaf));
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 8px 28px rgba(42, 90, 68, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .mascot-btn:hover {
+      transform: scale(1.08) rotate(4deg);
+    }
+
+    .mascot-svg {
+      width: 42px;
+      height: 42px;
+    }
+
+    .mascot-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background: #22C55E;
+      border: 2px solid #FFFFFF;
+      border-radius: 50%;
+    }
+
+    /* Chat Drawer / Modal */
+    .chat-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1001;
+      background: rgba(35, 31, 28, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: flex-end;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chat-modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .chat-drawer {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      background: var(--bg-cream);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -12px 0 40px rgba(0, 0, 0, 0.15);
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .chat-modal-overlay.active .chat-drawer {
+      transform: translateX(0);
+    }
+
+    /* Chat Drawer Header */
+    .drawer-header {
+      padding: 1.25rem 1.5rem;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-mascot-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .drawer-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--green-tint);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .drawer-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--soil-dark);
+      line-height: 1.2;
+    }
+
+    .drawer-sub {
+      font-size: 0.75rem;
+      color: var(--green-leaf);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .drawer-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .drawer-btn {
+      background: transparent;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--soil-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drawer-btn:hover {
+      background: var(--bg-wheat);
+      color: var(--soil-dark);
+    }
+
+    /* Chat Messages Stream */
+    .drawer-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      scroll-behavior: smooth;
+    }
+
+    .chat-bubble {
+      max-width: 88%;
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      animation: bubbleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      word-break: break-word;
+      position: relative;
+    }
+
+    @keyframes bubbleIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--green-primary), var(--green-leaf));
+      color: #FFFFFF;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 12px rgba(42, 90, 68, 0.25);
+    }
+
+    .chat-bubble.bot {
+      align-self: flex-start;
+      background: #FFFFFF;
+      color: var(--soil-dark);
+      border: 1px solid var(--border-subtle);
+      border-bottom-left-radius: 4px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chat-bubble.bot p {
+      margin-bottom: 0.6rem;
+    }
+
+    .chat-bubble.bot p:last-child {
+      margin-bottom: 0;
+    }
+
+    .chat-bubble.bot strong {
+      color: var(--green-primary);
+    }
+
+    /* Sources container */
+    .chat-sources-box {
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed rgba(35, 31, 28, 0.12);
+      font-size: 0.8rem;
+    }
+
+    .sources-title {
+      font-weight: 700;
+      color: var(--green-primary);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .source-chip {
+      background: var(--bg-wheat);
+      padding: 5px 10px;
+      border-radius: 6px;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      border-left: 3px solid var(--green-leaf);
+      color: var(--soil-dark);
+    }
+
+    /* Typing Dots Indicator */
+    .typing-indicator-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.75rem 1.25rem;
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      align-self: flex-start;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green-leaf);
+      border-radius: 50%;
+      animation: dotBounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .typing-text {
+      font-size: 0.8rem;
+      color: var(--soil-muted);
+      margin-left: 4px;
+      font-weight: 500;
+    }
+
+    /* Input Dock */
+    .drawer-input-dock {
+      padding: 1rem 1.25rem;
+      background: #FFFFFF;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .drawer-quick-prompts {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
+      scrollbar-width: none;
+    }
+
+    .drawer-quick-prompts::-webkit-scrollbar { display: none; }
+
+    .drawer-prompt-chip {
+      background: var(--bg-cream);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--soil-dark);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drawer-prompt-chip:hover {
+      background: var(--green-tint);
+      border-color: var(--green-sage);
+      color: var(--green-primary);
+    }
+
+    .drawer-form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drawer-input {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      outline: none;
+      background: var(--bg-cream);
+      color: var(--soil-dark);
+      transition: border-color 0.2s;
+    }
+
+    .drawer-input:focus {
+      border-color: var(--green-primary);
+      background: #FFFFFF;
+    }
+
+    .drawer-voice-btn {
+      background: var(--bg-cream);
+      border: 1px solid var(--border-subtle);
+      color: var(--soil-muted);
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
       flex-shrink: 0;
     }
 
-    .send-btn:hover:not(:disabled) {
-      background: var(--green-dark);
+    .drawer-voice-btn:hover {
+      background: var(--green-tint);
+      color: var(--green-primary);
+    }
+
+    .drawer-voice-btn.listening {
+      background: #EF4444;
+      color: #fff;
+      animation: pulseMic 1.5s infinite;
+    }
+
+    @keyframes pulseMic {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .drawer-send-btn {
+      background: var(--green-primary);
+      color: #FFFFFF;
+      border: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+
+    .drawer-send-btn:hover:not(:disabled) {
+      background: var(--green-leaf);
       transform: scale(1.05);
     }
 
-    .send-btn:disabled {
-      opacity: 0.5;
+    .drawer-send-btn:disabled {
+      opacity: 0.4;
       cursor: not-allowed;
     }
 
-    /* KrishiMitra mascot */
-    .krishi-mitra {
-      position: absolute;
-      right: 1.5rem;
-      bottom: 5rem;
-      width: 80px;
-      height: 120px;
-      pointer-events: none;
-      transition: transform .3s ease;
-      z-index: 3;
+    /* Footer */
+    .app-footer {
+      background: var(--soil-dark);
+      color: #FFFFFF;
+      padding: 4rem 2rem 2.5rem;
+      position: relative;
+      z-index: 2;
     }
 
-    .krishi-mitra.idle {
-      animation: breathe 4s ease-in-out infinite;
-    }
-
-    .krishi-mitra.typing {
-      animation: bob .6s ease-in-out infinite;
-    }
-
-    .krishi-mitra.thinking {
-      animation: rock 1.2s ease-in-out infinite;
-    }
-
-    @keyframes breathe {
-
-      0%,
-      100% {
-        transform: scale(1)
-      }
-
-      50% {
-        transform: scale(1.02)
-      }
-    }
-
-    @keyframes bob {
-
-      0%,
-      100% {
-        transform: translateY(0)
-      }
-
-      50% {
-        transform: translateY(-4px)
-      }
-    }
-
-    @keyframes rock {
-
-      0%,
-      100% {
-        transform: rotate(0)
-      }
-
-      50% {
-        transform: rotate(2deg)
-      }
-    }
-
-    .pot-plant {
-      width: 100%;
-      height: 100%;
-    }
-
-    .leaves path {
-      transform-origin: center 70px;
-      animation: sway 3s ease-in-out infinite alternate;
-    }
-
-    @keyframes sway {
-      from {
-        transform: rotate(-4deg)
-      }
-
-      to {
-        transform: rotate(4deg)
-      }
-    }
-
-    .bubble {
-      position: absolute;
-      bottom: 130px;
-      left: 50%;
-      transform: translateX(-50%);
-      max-width: 180px;
-      padding: .5rem .75rem;
-      background: #fff;
-      border-radius: 1rem;
-      box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .1);
-      font: .78rem/1.3 sans-serif;
-      color: var(--soil);
-      text-align: center;
-    }
-
-    .bubble::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -6px;
-      border: 6px solid transparent;
-      border-top-color: #fff;
-    }
-
-    /* Loading dots indicator */
-    .typing-dots {
-      display: inline-flex;
-      gap: 4px;
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
       align-items: center;
+      text-align: center;
+      gap: 1.5rem;
     }
 
-    .typing-dots span {
-      width: 6px;
-      height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: bounce 1.4s infinite ease-in-out both;
+    .footer-brand {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-weight: 800;
     }
 
-    .typing-dots span:nth-child(1) {
-      animation-delay: -0.32s;
+    .footer-copy {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
     }
 
-    .typing-dots span:nth-child(2) {
-      animation-delay: -0.16s;
+    /* Accessibility / Responsive */
+    @media (max-width: 768px) {
+      .navbar { padding: 0.75rem 1rem; }
+      .nav-links { display: none; }
+      .hero-section { padding: 3rem 1rem 2.5rem; }
+      .chat-drawer { max-width: 100%; }
+      .chat-widget-trigger { bottom: 1.25rem; right: 1.25rem; }
     }
 
-    @keyframes bounce {
-
-      0%,
-      80%,
-      100% {
-        transform: scale(0);
-      }
-
-      40% {
-        transform: scale(1.0);
-      }
-    }
-
-    /* fade in helper */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(6px)
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0)
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
       }
     }
   </style>
 </head>
 
 <body>
-  <div id="root">
-    <!-- Splash -->
-    <section class="splash-page bg-pattern" id="splash">
-      <svg class="dandelion-svg" viewBox="0 0 200 300" aria-hidden="true">
-        <path d="M100,180 Q100,260 100,280" stroke="#7A9E7E" stroke-width="2" fill="none" />
-        <path d="M100,210 Q80,210 85,225 Q100,215 115,225 Q100,215 100,210" fill="#7A9E7E" opacity="0.6" />
-        <g id="filaments" class="filaments"></g>
-        <circle id="centerDisc" cx="100" cy="100" r="6" fill="#FFFFFF" filter="drop-shadow(0 0 4px #FFF)" />
-      </svg>
-      <div class="splash-title">🌾 KrishiMitra</div>
-      <p class="splash-hint">AI-Powered Agricultural Assistant<br><strong>Click anywhere to begin</strong></p>
-    </section>
+  <!-- Background Soil Texture -->
+  <div class="bg-texture"></div>
 
-    <!-- Chat page -->
-    <main class="chat-page bg-pattern" id="chatPage">
-      <header class="header">
-        <div class="wordmark">
-          🌱 KrishiMitra <span class="badge-live">Online RAG</span>
-        </div>
-        <div class="header-actions">
-          <button class="icon-btn" title="About"
-            onclick="alert('KrishiMitra connects Indian agricultural datasets with Groq Llama 3.3 for reliable farming insights.')">ℹ️</button>
-        </div>
-      </header>
+  <!-- Ambient Floating Dandelion Seeds Canvas for Main Page -->
+  <canvas id="ambientSeedsCanvas"></canvas>
 
-      <div class="chat-grid">
-        <aside class="sidebar">
-          <button class="new-chat-btn" id="newChatBtn">
-            ➕ New Conversation
-          </button>
+  <!-- ==========================================================================
+       1. 3D DANDELION CINEMATIC INTRO OVERLAY (BLACK THEME • PUFFBALL HEAD ONLY)
+       ========================================================================== -->
+  <div class="intro-overlay" id="introOverlay" aria-label="3D Dandelion Intro Screen">
+    <!-- WebGL Canvas for 3D Dandelion -->
+    <canvas id="dandelionCanvas"></canvas>
 
-          <div class="sidebar-section-title">Suggested Topics</div>
+    <!-- Minimal Loader while Three.js loads -->
+    <div class="intro-loader" id="introLoader">
+      <div class="loader-ring"></div>
+      <span style="font-size: 0.85rem; font-weight: 600; color: #FFFFFF;">Cultivating Scene…</span>
+    </div>
 
-          <div class="history-item" onclick="askPreset('What is the yield of Rice in Haryana during Kharif season?')">
-            <div class="history-title">🌾 Rice Yield (Haryana)</div>
-            <div class="history-preview">Kharif season production data</div>
-          </div>
-
-          <div class="history-item" onclick="askPreset('What crops are suitable for Punjab state?')">
-            <div class="history-title">🚜 Punjab Agriculture</div>
-            <div class="history-preview">Wheat, cotton & paddy crop stats</div>
-          </div>
-
-          <div class="history-item"
-            onclick="askPreset('What are effective organic pest management methods for vegetables?')">
-            <div class="history-title">🐛 Organic Pest Control</div>
-            <div class="history-preview">Neem oil & natural sprays</div>
-          </div>
-        </aside>
-
-        <section class="chat-area">
-          <div class="messages" id="messages">
-            <div class="msg bot">
-              <p>🙏 <strong>Namaste!</strong> I am <strong>KrishiMitra</strong>, your agricultural assistant.</p>
-              <p>You can ask me questions about crop yields, seasonal trends, districts, or sustainable farming
-                practices across India.</p>
-            </div>
-          </div>
-
-          <div class="input-wrap">
-            <input class="input-field" id="userInput" placeholder="Ask about crops, yields, seasons, states…"
-              aria-label="Your question" autocomplete="off">
-            <button class="send-btn" id="sendBtn" aria-label="Send">➤</button>
-          </div>
-
-          <!-- KrishiMitra mascot -->
-          <div class="krishi-mitra idle" id="mascot" aria-hidden="true">
-            <svg class="pot-plant" viewBox="0 0 80 120">
-              <defs>
-                <linearGradient id="potGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#E8DCC8" />
-                  <stop offset="100%" stop-color="#D4C4A8" />
-                </linearGradient>
-              </defs>
-              <path d="M10,110 L10,80 Q10,70 20,70 L60,70 Q70,70 70,80 L70,110 Z" fill="url(#potGrad)" stroke="#3D2B1F"
-                stroke-width="1" />
-              <g class="leaves">
-                <path d="M40,70 Q30,40 40,30 Q50,40 40,70" fill="#7FB069" />
-                <path d="M40,70 Q55,45 65,35 Q55,55 40,70" fill="#4A7C59" />
-              </g>
-            </svg>
-            <div class="bubble greeting">Namaste! Ask me anything about farming.</div>
-            <div class="bubble tip" style="display:none;">Rotate crops each season for healthier soil.</div>
-          </div>
-        </section>
+    <!-- Intro Header -->
+    <header class="intro-header">
+      <div class="intro-brand">
+        🌾 KrishiMitra
+        <span class="brand-badge">Agri-Pulse AI</span>
       </div>
-    </main>
+    </header>
+
+    <!-- Intro Center Faint Hint -->
+    <div class="intro-center-info" id="introCenterInfo">
+      <div class="intro-hint" id="introHint">
+        ✨ Click anywhere
+      </div>
+    </div>
+
+    <!-- Intro Footer -->
+    <footer class="intro-footer">
+      Powered by Indian Agricultural Datasets • FAISS Vector Store • Groq Llama 3.3
+    </footer>
   </div>
 
+  <!-- ==========================================================================
+       2. MAIN WEB DASHBOARD & LANDING EXPERIENCE
+       ========================================================================== -->
+  <div class="app-wrapper" id="appWrapper">
+    <!-- Top Navigation Bar -->
+    <nav class="navbar" role="navigation">
+      <div class="navbar-inner">
+        <a href="#" class="logo-group" aria-label="KrishiMitra Home">
+          <div class="logo-icon">🌱</div>
+          <div class="logo-text">Krishi<span>Mitra</span></div>
+          <span class="status-pill"><span class="status-dot"></span> Live RAG</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#topics" class="nav-link">Topics</a></li>
+          <li><a href="#architecture" class="nav-link">Architecture</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button class="btn-replay-intro" id="replayIntroBtn" title="Replay 3D Dandelion Bloom">
+            🌸 3D Bloom
+          </button>
+          <button class="btn-launch-chat" id="headerChatBtn">
+            💬 Ask Assistant
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-eyebrow">
+        🌾 Domain-Specific Agricultural RAG Engine
+      </div>
+      <h1 class="hero-heading">
+        Intelligent Farming Insights,<br>
+        <em>Data-Backed & Instant.</em>
+      </h1>
+      <p class="hero-subtext">
+        Empowering farmers, agronomists, and researchers across India with verified crop yields, seasonal analysis, soil health recommendations, and real-time advisory.
+      </p>
+
+      <!-- Interactive Search / Question Trigger -->
+      <div class="hero-search-wrapper">
+        <form class="hero-search-box" id="heroSearchForm" onsubmit="handleHeroSubmit(event)">
+          <span class="hero-search-icon">🔍</span>
+          <input 
+            type="text" 
+            class="hero-search-input" 
+            id="heroSearchInput" 
+            placeholder="Ask anything (e.g., Rice yield in Haryana, Kharif crops in Punjab, organic pest control)..."
+            aria-label="Ask agricultural question"
+          />
+          <button type="submit" class="hero-search-btn">
+            Consult AI ➔
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Prompt Pills -->
+      <div class="hero-prompts">
+        <button class="prompt-chip" onclick="triggerQuery('What is the yield of Rice in Haryana during Kharif season?')">
+          🌾 Rice Yield (Haryana)
+        </button>
+        <button class="prompt-chip" onclick="triggerQuery('What crops are most suitable for Punjab state?')">
+          🚜 Punjab Agriculture
+        </button>
+        <button class="prompt-chip" onclick="triggerQuery('What are effective organic pest management methods for vegetables?')">
+          🐛 Organic Pest Control
+        </button>
+        <button class="prompt-chip" onclick="triggerQuery('How to improve soil NPK levels sustainably in Black Soil?')">
+          🌱 Soil Nutrients (NPK)
+        </button>
+      </div>
+
+      <!-- Dynamic Stat Highlights -->
+      <div class="hero-stats-grid">
+        <div class="stat-card">
+          <div class="stat-num">100K+</div>
+          <div class="stat-label">Historical Records Indexed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">&lt; 800ms</div>
+          <div class="stat-label">Groq Llama 3.3 Latency</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">28+</div>
+          <div class="stat-label">Indian States & Districts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">100%</div>
+          <div class="stat-label">Grounded RAG Citations</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Topics & Suggested Questions Section -->
+    <section class="section-container" id="topics">
+      <div class="section-header">
+        <span class="section-tag">Instant Knowledge Explorer</span>
+        <h2 class="section-title">Explore Verified Agricultural Intelligence</h2>
+        <p class="section-desc">Click any domain to consult KrishiMitra directly with grounded data retrieval.</p>
+      </div>
+
+      <div class="topics-grid">
+        <div class="topic-card" onclick="triggerQuery('What are the major Kharif and Rabi season crops in Maharashtra?')">
+          <div class="topic-icon">🌾</div>
+          <h3 class="topic-title">Crop Yield & Seasonality</h3>
+          <p class="topic-text">Detailed analysis of state-wise Kharif, Rabi, and Zaid crop performance, acreage, and yield trends.</p>
+          <span class="topic-action">Ask about Crop Trends ➔</span>
+        </div>
+
+        <div class="topic-card" onclick="triggerQuery('What soil preparation and fertilizer dosage is best for Wheat cultivation?')">
+          <div class="topic-icon">🧪</div>
+          <h3 class="topic-title">Soil & Fertilizer Advisory</h3>
+          <p class="topic-text">Soil texture classification, pH balance, NPK requirements, and organic amendment strategies.</p>
+          <span class="topic-action">Ask about Soil Health ➔</span>
+        </div>
+
+        <div class="topic-card" onclick="triggerQuery('How to control stem borer in Paddy without excessive chemical pesticides?')">
+          <div class="topic-icon">🌿</div>
+          <h3 class="topic-title">Pest & Disease Control</h3>
+          <p class="topic-text">Biological and organic solutions for common crop pests, fungal infestations, and leaf blights.</p>
+          <span class="topic-action">Ask about Pest Management ➔</span>
+        </div>
+
+        <div class="topic-card" onclick="triggerQuery('What are best water conservation and drip irrigation practices for Cotton?')">
+          <div class="topic-icon">💧</div>
+          <h3 class="topic-title">Water & Irrigation</h3>
+          <p class="topic-text">Drip irrigation efficiency, rainfall pattern synthesis, and dryland farming techniques for high yields.</p>
+          <span class="topic-action">Ask about Irrigation ➔</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="section-container" id="architecture">
+      <div class="section-header">
+        <span class="section-tag">Production-Grade RAG</span>
+        <h2 class="section-title">Engineered for Accuracy & Speed</h2>
+        <p class="section-desc">Multi-tier RAG pipeline combining vector embeddings with ultra-fast LLM synthesis.</p>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-flow-grid">
+          <div class="arch-node">
+            <span class="arch-badge">Step 1</span>
+            <div class="arch-node-title">Farmer Query</div>
+            <p class="arch-node-desc">Natural language input in English, Hindi, or Hinglish via text or voice.</p>
+          </div>
+          <div class="arch-node">
+            <span class="arch-badge">Step 2</span>
+            <div class="arch-node-title">MiniLM Embeddings</div>
+            <p class="arch-node-desc">384-dimensional vector embeddings generated using sentence-transformers.</p>
+          </div>
+          <div class="arch-node">
+            <span class="arch-badge">Step 3</span>
+            <div class="arch-node-title">FAISS Vector Search</div>
+            <p class="arch-node-desc">Sub-millisecond similarity retrieval over indexed Indian crop datasets.</p>
+          </div>
+          <div class="arch-node">
+            <span class="arch-badge">Step 4</span>
+            <div class="arch-node-title">Groq Llama 3.3 Engine</div>
+            <p class="arch-node-desc">Ultra-fast synthesis with strict domain grounding and source citations.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">🌱 KrishiMitra (Agri-Pulse)</div>
+        <p class="footer-copy">
+          Designed to empower Indian agriculture with open data, vector intelligence, and AI.
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       3. CUTE CHATBOT FLOATING WIDGET & MASCOT
+       ========================================================================== -->
+  <!-- Floating Mascot Trigger Button -->
+  <div class="chat-widget-trigger" id="chatWidgetTrigger" aria-label="Open KrishiMitra Assistant">
+    <div class="widget-bubble-hint" id="widgetHint">
+      🙏 Ask KrishiMitra!
+    </div>
+    <div class="mascot-btn" id="mascotBtn" role="button" tabindex="0">
+      <!-- Mascot SVG (Cute Sprout in Pot) -->
+      <svg class="mascot-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="potGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#F9F1E6" />
+            <stop offset="100%" stop-color="#D4A373" />
+          </linearGradient>
+        </defs>
+        <!-- Clay Pot -->
+        <path d="M25,65 L32,90 Q50,96 68,90 L75,65 Q50,60 25,65 Z" fill="url(#potGrad)" stroke="#3D2B1F" stroke-width="2" />
+        <!-- Soil -->
+        <ellipse cx="50" cy="65" rx="25" ry="6" fill="#3D2B1F" />
+        <!-- Sprout Stems & Leaves -->
+        <path d="M50,65 Q48,45 42,32 Q32,40 50,65" fill="#7FB069" stroke="#2F523A" stroke-width="1.5" />
+        <path d="M50,65 Q52,42 62,28 Q68,42 50,65" fill="#4A7C59" stroke="#2F523A" stroke-width="1.5" />
+        <circle cx="50" cy="30" r="10" fill="#FFF7E6" filter="drop-shadow(0 0 4px #D4A373)" />
+        <!-- Cute Face -->
+        <circle cx="47" cy="29" r="1.5" fill="#231F1C" />
+        <circle cx="53" cy="29" r="1.5" fill="#231F1C" />
+        <path d="M48,33 Q50,35 52,33" fill="none" stroke="#231F1C" stroke-width="1" stroke-linecap="round" />
+      </svg>
+      <div class="mascot-badge" title="Online"></div>
+    </div>
+  </div>
+
+  <!-- Chat Drawer / Modal Panel -->
+  <div class="chat-modal-overlay" id="chatModalOverlay" role="dialog" aria-modal="true" aria-labelledby="chatTitle">
+    <div class="chat-drawer" id="chatDrawer">
+      <!-- Drawer Header -->
+      <div class="drawer-header">
+        <div class="drawer-mascot-info">
+          <div class="drawer-avatar">🌱</div>
+          <div>
+            <div class="drawer-title" id="chatTitle">KrishiMitra Assistant</div>
+            <div class="drawer-sub">
+              <span class="status-dot" style="width:5px; height:5px;"></span> Online • RAG + Groq
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-actions">
+          <button class="drawer-btn" id="newChatDrawerBtn" title="Start New Conversation">
+            ➕
+          </button>
+          <button class="drawer-btn" id="closeDrawerBtn" title="Close Assistant" aria-label="Close">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="drawer-messages" id="drawerMessages" role="log" aria-live="polite">
+        <div class="chat-bubble bot">
+          <p>🙏 <strong>Namaste!</strong> I am <strong>KrishiMitra</strong>, your intelligent agricultural advisory assistant.</p>
+          <p>You can ask me questions about crop yields, seasonal trends, state-wise statistics, or organic farming practices across India.</p>
+        </div>
+      </div>
+
+      <!-- Input Dock -->
+      <div class="drawer-input-dock">
+        <!-- Quick prompt chips inside drawer -->
+        <div class="drawer-quick-prompts">
+          <button class="drawer-prompt-chip" onclick="triggerQuery('What is the yield of Rice in Haryana during Kharif season?')">🌾 Rice Yield</button>
+          <button class="drawer-prompt-chip" onclick="triggerQuery('What crops are suitable for Punjab state?')">🚜 Punjab Crops</button>
+          <button class="drawer-prompt-chip" onclick="triggerQuery('How to prepare organic neem pesticide?')">🌿 Neem Pesticide</button>
+        </div>
+
+        <form class="drawer-form" id="drawerForm" onsubmit="handleDrawerSubmit(event)">
+          <input 
+            type="text" 
+            class="drawer-input" 
+            id="drawerInput" 
+            placeholder="Ask about crops, yields, weather…" 
+            aria-label="Your farming question" 
+            autocomplete="off"
+          />
+          <button type="button" class="drawer-voice-btn" id="voiceBtn" title="Voice Input (Speech-to-Text)">
+            🎤
+          </button>
+          <button type="submit" class="drawer-send-btn" id="drawerSendBtn" aria-label="Send Message">
+            ➤
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       4. SCRIPTS: 3D DANDELION PUFFBALL, LENIS, PARTICLES & RAG CHAT LOGIC
+       ========================================================================== -->
   <script>
-    /* ---------- Dandelion Bloom Splash Animation ---------- */
-    const filaments = document.getElementById('filaments');
-    const centerDisc = document.getElementById('centerDisc');
-    const splash = document.getElementById('splash');
-    const chatPage = document.getElementById('chatPage');
-
-    for (let i = 0; i < 60; i++) {
-      const angle = (i / 60) * Math.PI * 2;
-      const len = 55 + Math.random() * 10;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', 100);
-      line.setAttribute('y1', 100);
-      line.setAttribute('x2', 100 + Math.cos(angle) * len);
-      line.setAttribute('y2', 100 + Math.sin(angle) * len);
-      line.setAttribute('stroke', '#FFFFFF');
-      line.setAttribute('stroke-width', '1.2');
-      line.setAttribute('stroke-linecap', 'round');
-      line.setAttribute('filter', 'drop-shadow(0 0 1px rgba(255,255,255,0.8))');
-      filaments.appendChild(line);
+    /* --------------------------------------------------------------------------
+       A. LENIS SMOOTH SCROLL & GSAP SETUP
+       -------------------------------------------------------------------------- */
+    let lenis;
+    try {
+      lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smooth: true,
+      });
+      function raf(time) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      }
+      requestAnimationFrame(raf);
+    } catch (e) {
+      console.warn('Lenis smooth scroll fallback', e);
     }
 
-    gsap.to(filaments, {
-      rotation: "±3", transformOrigin: "center bottom", duration: 3, repeat: -1, yoyo: true, ease: "sine.inOut"
+    /* --------------------------------------------------------------------------
+       B. 3D DANDELION PUFFBALL HEAD (THREE.JS + GSAP • BLACK THEME • NO STEM)
+       -------------------------------------------------------------------------- */
+    const introOverlay = document.getElementById('introOverlay');
+    const introCenterInfo = document.getElementById('introCenterInfo');
+    const appWrapper = document.getElementById('appWrapper');
+    const replayIntroBtn = document.getElementById('replayIntroBtn');
+    const introLoader = document.getElementById('introLoader');
+    const dandelionCanvas = document.getElementById('dandelionCanvas');
+
+    let scene, camera, renderer, dandelionGroup;
+    let filamentLines, tipPoints, coreMesh, backgroundPollen;
+    let isBloomed = false;
+    let animationFrameId;
+    let mouseX = 0, mouseY = 0;
+    let targetTiltX = 0, targetTiltY = 0;
+
+    const FLORET_COUNT = 520;
+    const floretData = [];
+
+    // Helper: Create circular feathered soft particle texture
+    function createFeatherTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.9)');
+      grad.addColorStop(0.6, 'rgba(240, 245, 255, 0.35)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function init3DScene() {
+      if (!window.THREE) return;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 0, 16);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: dandelionCanvas,
+        alpha: true,
+        antialias: true
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Lighting for luminous white aesthetics
+      const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1.2);
+      scene.add(ambientLight);
+
+      const pointLight = new THREE.PointLight(0xFFFFFF, 2.5, 30);
+      pointLight.position.set(0, 0, 8);
+      scene.add(pointLight);
+
+      const rimLight = new THREE.DirectionalLight(0xE0F2FE, 1.5);
+      rimLight.position.set(-5, 8, -5);
+      scene.add(rimLight);
+
+      // Group for Dandelion Head (Puffball)
+      dandelionGroup = new THREE.Group();
+      scene.add(dandelionGroup);
+
+      // 1. Central Core (Glowing Receptacle)
+      const coreGeo = new THREE.SphereGeometry(0.75, 32, 32);
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: 0xFFFFFF,
+        emissive: 0xEEEEEE,
+        emissiveIntensity: 0.6,
+        roughness: 0.2
+      });
+      coreMesh = new THREE.Mesh(coreGeo, coreMat);
+      dandelionGroup.add(coreMesh);
+
+      // 2. Procedural Radial Filaments & Feathery Tips (Fibonacci Sphere Distribution)
+      const linePositions = new Float32Array(FLORET_COUNT * 2 * 3);
+      const tipPositions = new Float32Array(FLORET_COUNT * 3);
+      const tipColors = new Float32Array(FLORET_COUNT * 3);
+
+      const phi = Math.PI * (3 - Math.sqrt(5)); // Golden angle
+
+      for (let i = 0; i < FLORET_COUNT; i++) {
+        const y = 1 - (i / (FLORET_COUNT - 1)) * 2; // -1 to 1
+        const radiusAtY = Math.sqrt(1 - y * y);
+        const theta = phi * i;
+
+        const dirX = Math.cos(theta) * radiusAtY;
+        const dirY = y;
+        const dirZ = Math.sin(theta) * radiusAtY;
+
+        const floretLength = 4.2 + (Math.random() * 0.8 - 0.4);
+
+        // Filament start (at central core surface)
+        const startR = 0.7;
+        const sx = dirX * startR;
+        const sy = dirY * startR;
+        const sz = dirZ * startR;
+
+        // Filament end (tip)
+        const tx = dirX * floretLength;
+        const ty = dirY * floretLength;
+        const tz = dirZ * floretLength;
+
+        // Line segment
+        linePositions[i * 6 + 0] = sx;
+        linePositions[i * 6 + 1] = sy;
+        linePositions[i * 6 + 2] = sz;
+        linePositions[i * 6 + 3] = tx;
+        linePositions[i * 6 + 4] = ty;
+        linePositions[i * 6 + 5] = tz;
+
+        // Tip Point
+        tipPositions[i * 3 + 0] = tx;
+        tipPositions[i * 3 + 1] = ty;
+        tipPositions[i * 3 + 2] = tz;
+
+        // Glowing white with slight soft silver/ice tint
+        tipColors[i * 3 + 0] = 1.0;
+        tipColors[i * 3 + 1] = 1.0;
+        tipColors[i * 3 + 2] = 1.0;
+
+        floretData.push({
+          dir: new THREE.Vector3(dirX, dirY, dirZ).normalize(),
+          origTip: new THREE.Vector3(tx, ty, tz),
+          speed: 1.5 + Math.random() * 2.5,
+          rotAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
+        });
+      }
+
+      // Line geometry for filaments
+      const lineGeo = new THREE.BufferGeometry();
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0xFFFFFF,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending
+      });
+      filamentLines = new THREE.LineSegments(lineGeo, lineMat);
+      dandelionGroup.add(filamentLines);
+
+      // Particle geometry for feathery tufts
+      const tipGeo = new THREE.BufferGeometry();
+      tipGeo.setAttribute('position', new THREE.BufferAttribute(tipPositions, 3));
+      tipGeo.setAttribute('color', new THREE.BufferAttribute(tipColors, 3));
+
+      const particleTex = createFeatherTexture();
+      const tipMat = new THREE.PointsMaterial({
+        size: 0.75,
+        map: particleTex,
+        transparent: true,
+        vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      tipPoints = new THREE.Points(tipGeo, tipMat);
+      dandelionGroup.add(tipPoints);
+
+      // 3. Subtle ambient background floating white pollen
+      const pollenCount = 120;
+      const pollenPositions = new Float32Array(pollenCount * 3);
+      for (let i = 0; i < pollenCount; i++) {
+        pollenPositions[i * 3 + 0] = (Math.random() - 0.5) * 30;
+        pollenPositions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+        pollenPositions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+      }
+      const pollenGeo = new THREE.BufferGeometry();
+      pollenGeo.setAttribute('position', new THREE.BufferAttribute(pollenPositions, 3));
+      const pollenMat = new THREE.PointsMaterial({
+        size: 0.35,
+        map: particleTex,
+        transparent: true,
+        opacity: 0.35,
+        color: 0xFFFFFF,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      backgroundPollen = new THREE.Points(pollenGeo, pollenMat);
+      scene.add(backgroundPollen);
+
+      // Hide Loader
+      if (introLoader) introLoader.classList.add('hidden');
+
+      // Start render loop
+      animate3D();
+    }
+
+    function animate3D() {
+      animationFrameId = requestAnimationFrame(animate3D);
+
+      if (dandelionGroup && !isBloomed) {
+        // Idle organic sway & smooth mouse tilt
+        const time = performance.now() * 0.001;
+        targetTiltX += (mouseY * 0.25 - targetTiltX) * 0.05;
+        targetTiltY += (mouseX * 0.25 - targetTiltY) * 0.05;
+
+        dandelionGroup.rotation.y = Math.sin(time * 0.5) * 0.15 + targetTiltY;
+        dandelionGroup.rotation.x = Math.cos(time * 0.4) * 0.1 + targetTiltX;
+        dandelionGroup.rotation.z = Math.sin(time * 0.3) * 0.05;
+        dandelionGroup.position.y = Math.sin(time * 1.0) * 0.2;
+
+        if (backgroundPollen) {
+          backgroundPollen.rotation.y = time * 0.02;
+          backgroundPollen.rotation.x = time * 0.01;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Mouse tilt tracking
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     });
-    gsap.to(filaments, { opacity: 0.6, duration: 1.2, repeat: -1, yoyo: true, ease: "power1.inOut" });
 
-    function bloom() {
-      gsap.timeline()
-        .to(filaments, {
-          scale: 2.5, y: -120, opacity: 0,
-          stagger: { each: 0.01, from: "center" },
-          duration: 0.7, ease: "power2.out"
-        })
-        .to(centerDisc, { fill: "#FFF7E6", filter: "drop-shadow(0 0 12px #FFF7E6)", duration: 0.4 }, "-=0.5");
+    window.addEventListener('resize', () => {
+      if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    });
+
+    // 5-Second Cinematic Bloom Sequence on Click Anywhere
+    function triggerBloomSequence() {
+      if (isBloomed) return;
+      isBloomed = true;
+
+      // Fade out hint text immediately
+      if (introCenterInfo) {
+        introCenterInfo.style.opacity = '0';
+      }
+
+      // Check prefers-reduced-motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) {
+        finishIntro();
+        return;
+      }
+
+      // GSAP Timeline for ~5s cinematic sequence
+      const bloomTimeline = gsap.timeline({
+        onComplete: finishIntro
+      });
+
+      // 1. Expand dandelion head filaments & seeds outward and upward
+      bloomTimeline.to(tipPoints.scale, {
+        x: 3.5,
+        y: 3.5,
+        z: 3.5,
+        duration: 4.2,
+        ease: "power2.out"
+      }, 0);
+
+      bloomTimeline.to(filamentLines.scale, {
+        x: 2.8,
+        y: 2.8,
+        z: 2.8,
+        duration: 3.6,
+        ease: "power2.out"
+      }, 0);
+
+      bloomTimeline.to(filamentLines.material, {
+        opacity: 0,
+        duration: 3.0,
+        ease: "power1.in"
+      }, 0.5);
+
+      bloomTimeline.to(coreMesh.scale, {
+        x: 0,
+        y: 0,
+        z: 0,
+        duration: 1.5,
+        ease: "power2.in"
+      }, 0);
+
+      bloomTimeline.to(dandelionGroup.position, {
+        z: 7,
+        y: 2,
+        duration: 4.5,
+        ease: "power1.inOut"
+      }, 0);
+
+      bloomTimeline.to(camera.position, {
+        z: 6,
+        duration: 4.8,
+        ease: "power2.inOut"
+      }, 0);
+
+      // Smoothly dissolve black intro screen into main page
+      bloomTimeline.to(introOverlay, {
+        opacity: 0,
+        duration: 1.4,
+        ease: "power2.inOut"
+      }, 3.6);
     }
 
-    function enterChat() {
-      bloom();
-      splash.classList.add('exit');
-      setTimeout(() => {
-        splash.style.display = 'none';
-        chatPage.classList.add('active');
-        document.getElementById('userInput').focus();
-      }, 500);
+    function finishIntro() {
+      introOverlay.classList.add('hidden');
+      appWrapper.classList.add('visible');
+      sessionStorage.setItem('krishi_intro_seen', 'true');
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
     }
-    splash.addEventListener('click', enterChat);
-    splash.addEventListener('keydown', e => { if (e.key === 'Enter') enterChat(); });
 
-    /* ---------- Real RAG Chat Logic ---------- */
-    const input = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const messages = document.getElementById('messages');
-    const mascot = document.getElementById('mascot');
-    const tipBubble = mascot.querySelector('.tip');
-    const greetingBubble = mascot.querySelector('.greeting');
-    const newChatBtn = document.getElementById('newChatBtn');
+    // Click anywhere listener
+    introOverlay.addEventListener('click', triggerBloomSequence);
+
+    // Replay 3D Bloom button
+    replayIntroBtn.addEventListener('click', () => {
+      isBloomed = false;
+      if (introCenterInfo) introCenterInfo.style.opacity = '1';
+      introOverlay.classList.remove('hidden');
+      introOverlay.style.opacity = '1';
+
+      if (tipPoints) tipPoints.scale.set(1, 1, 1);
+      if (filamentLines) {
+        filamentLines.scale.set(1, 1, 1);
+        filamentLines.material.opacity = 0.55;
+      }
+      if (coreMesh) coreMesh.scale.set(1, 1, 1);
+      if (camera) camera.position.set(0, 0, 16);
+      if (dandelionGroup) dandelionGroup.position.set(0, 0, 0);
+
+      animate3D();
+    });
+
+    // On Load
+    window.addEventListener('DOMContentLoaded', () => {
+      init3DScene();
+      initAmbientSeeds();
+
+      const seen = sessionStorage.getItem('krishi_intro_seen');
+      if (seen === 'true') {
+        introOverlay.classList.add('hidden');
+        appWrapper.classList.add('visible');
+      }
+    });
+
+    /* --------------------------------------------------------------------------
+       C. AMBIENT BACKGROUND FLOATING DANDELION SEEDS CANVAS (MAIN PAGE)
+       -------------------------------------------------------------------------- */
+    function initAmbientSeeds() {
+      const canvas = document.getElementById('ambientSeedsCanvas');
+      const ctx = canvas.getContext('2d');
+
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const seeds = [];
+      const SEED_NUM = 24;
+
+      for (let i = 0; i < SEED_NUM; i++) {
+        seeds.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: 1.5 + Math.random() * 2.5,
+          speedY: 0.3 + Math.random() * 0.6,
+          speedX: (Math.random() - 0.5) * 0.4,
+          opacity: 0.2 + Math.random() * 0.4,
+          angle: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.02
+        });
+      }
+
+      function drawSeeds() {
+        ctx.clearRect(0, 0, width, height);
+
+        seeds.forEach(s => {
+          s.y -= s.speedY;
+          s.x += s.speedX + Math.sin(s.angle) * 0.3;
+          s.angle += s.rotSpeed;
+
+          if (s.y < -20) {
+            s.y = height + 20;
+            s.x = Math.random() * width;
+          }
+          if (s.x < -20) s.x = width + 20;
+          if (s.x > width + 20) s.x = -20;
+
+          // Draw floret filament
+          ctx.save();
+          ctx.translate(s.x, s.y);
+          ctx.rotate(s.angle);
+          ctx.fillStyle = `rgba(212, 163, 115, ${s.opacity})`;
+          ctx.beginPath();
+          ctx.arc(0, 0, s.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Delicate seed tail
+          ctx.strokeStyle = `rgba(138, 184, 155, ${s.opacity * 0.7})`;
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(0, 8);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        requestAnimationFrame(drawSeeds);
+      }
+
+      drawSeeds();
+    }
+
+    /* --------------------------------------------------------------------------
+       D. REAL RAG CHATBOT LOGIC (100% PRESERVED ENDPOINT & DATA SCHEMA)
+       -------------------------------------------------------------------------- */
+    const chatModalOverlay = document.getElementById('chatModalOverlay');
+    const chatWidgetTrigger = document.getElementById('chatWidgetTrigger');
+    const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+    const headerChatBtn = document.getElementById('headerChatBtn');
+    const drawerMessages = document.getElementById('drawerMessages');
+    const drawerInput = document.getElementById('drawerInput');
+    const drawerSendBtn = document.getElementById('drawerSendBtn');
+    const newChatDrawerBtn = document.getElementById('newChatDrawerBtn');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const heroSearchInput = document.getElementById('heroSearchInput');
 
     let chatHistory = [];
-    let typingTimer;
+    let isProcessing = false;
 
-    input.addEventListener('input', () => {
-      mascot.className = 'krishi-mitra typing';
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => { mascot.className = 'krishi-mitra idle'; }, 800);
-    });
-
-    sendBtn.addEventListener('click', () => handleSend());
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
-
-    newChatBtn.addEventListener('click', () => {
-      chatHistory = [];
-      messages.innerHTML = `
-    <div class="msg bot">
-      <p>🙏 <strong>Namaste!</strong> New conversation started.</p>
-      <p>How can I help you today with your crops or farm?</p>
-    </div>
-  `;
-      input.focus();
-    });
-
-    function askPreset(question) {
-      input.value = question;
-      handleSend();
+    // Toggle Chat Drawer
+    function openChat() {
+      chatModalOverlay.classList.add('active');
+      setTimeout(() => drawerInput.focus(), 300);
     }
 
-    async function handleSend() {
-      const txt = input.value.trim();
-      if (!txt) return;
+    function closeChat() {
+      chatModalOverlay.classList.remove('active');
+    }
 
-      // Append user message
-      appendMsg(txt, 'user');
-      input.value = '';
-      input.disabled = true;
-      sendBtn.disabled = true;
-      mascot.className = 'krishi-mitra thinking';
+    chatWidgetTrigger.addEventListener('click', openChat);
+    headerChatBtn.addEventListener('click', openChat);
+    closeDrawerBtn.addEventListener('click', closeChat);
 
-      // Add temporary loading indicator bubble
-      const loadingDiv = document.createElement('div');
-      loadingDiv.className = 'msg bot';
-      loadingDiv.id = 'loadingMsg';
-      loadingDiv.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span> Asking KrishiMitra…';
-      messages.appendChild(loadingDiv);
-      messages.scrollTop = messages.scrollHeight;
+    // Close on overlay click or Escape key
+    chatModalOverlay.addEventListener('click', (e) => {
+      if (e.target === chatModalOverlay) closeChat();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && chatModalOverlay.classList.contains('active')) {
+        closeChat();
+      }
+    });
+
+    // New Conversation Reset
+    newChatDrawerBtn.addEventListener('click', () => {
+      chatHistory = [];
+      drawerMessages.innerHTML = `
+        <div class="chat-bubble bot">
+          <p>🙏 <strong>Namaste!</strong> New conversation started.</p>
+          <p>How can I help you today with your crops, soil, or farming advisory?</p>
+        </div>
+      `;
+      drawerInput.focus();
+    });
+
+    // Global Query Trigger (from Hero, Prompt Chips, or Topics Grid)
+    function triggerQuery(text) {
+      openChat();
+      drawerInput.value = text;
+      handleDrawerSend();
+    }
+
+    function handleHeroSubmit(e) {
+      e.preventDefault();
+      const val = heroSearchInput.value.trim();
+      if (!val) return;
+      heroSearchInput.value = '';
+      triggerQuery(val);
+    }
+
+    function handleDrawerSubmit(e) {
+      e.preventDefault();
+      handleDrawerSend();
+    }
+
+    // Core Send Handler — EXACT Backend Connection to /chat
+    async function handleDrawerSend() {
+      const queryText = drawerInput.value.trim();
+      if (!queryText || isProcessing) return;
+
+      isProcessing = true;
+      appendUserBubble(queryText);
+      drawerInput.value = '';
+      drawerInput.disabled = true;
+      drawerSendBtn.disabled = true;
+
+      // Append temporary typing indicator
+      const typingIndicator = document.createElement('div');
+      typingIndicator.className = 'typing-indicator-box';
+      typingIndicator.id = 'activeTypingIndicator';
+      typingIndicator.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <span class="typing-text">Consulting KrishiMitra RAG…</span>
+      `;
+      drawerMessages.appendChild(typingIndicator);
+      drawerMessages.scrollTop = drawerMessages.scrollHeight;
 
       try {
+        // EXACT backend call matching server.py: POST /chat with { query, history }
         const response = await fetch('/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
-            query: txt,
+            query: queryText,
             history: chatHistory
           })
         });
@@ -742,73 +2099,63 @@
 
         const data = await response.json();
 
-        // Remove loading indicator
-        loadingDiv.remove();
+        // Remove typing indicator
+        typingIndicator.remove();
 
-        // Append AI response
-        appendBotMsg(data.answer, data.sources || []);
+        // Append Bot Response with Citations
+        appendBotBubble(data.answer, data.sources || []);
 
-        // Update conversational memory
-        chatHistory.push({ role: 'user', content: txt });
+        // Update Conversational Memory
+        chatHistory.push({ role: 'user', content: queryText });
         chatHistory.push({ role: 'assistant', content: data.answer });
 
-        // Show rotating tip on mascot
-        const tips = [
-          "Rotate crops each season for healthier soil.",
-          "Mulch conserves soil moisture & suppresses weeds.",
-          "Test soil nutrients every 2-3 years."
-        ];
-        tipBubble.textContent = tips[Math.floor(Math.random() * tips.length)];
-        tipBubble.style.display = 'block';
-        greetingBubble.style.display = 'none';
-
       } catch (err) {
-        loadingDiv.remove();
-        appendMsg(`❌ Error: ${err.message}. Please verify the server is running.`, 'bot');
+        typingIndicator.remove();
+        appendBotBubble(`❌ Error: ${err.message}. Please ensure the KrishiMitra server is running at http://localhost:8000.`);
       } finally {
-        input.disabled = false;
-        sendBtn.disabled = false;
-        mascot.className = 'krishi-mitra idle';
-        input.focus();
+        isProcessing = false;
+        drawerInput.disabled = false;
+        drawerSendBtn.disabled = false;
+        drawerInput.focus();
       }
     }
 
-    function appendMsg(text, who) {
-      const div = document.createElement('div');
-      div.className = `msg ${who}`;
-      div.textContent = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
+    function appendUserBubble(text) {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble user';
+      bubble.textContent = text;
+      drawerMessages.appendChild(bubble);
+      drawerMessages.scrollTop = drawerMessages.scrollHeight;
     }
 
-    function appendBotMsg(answer, sources) {
-      const div = document.createElement('div');
-      div.className = 'msg bot';
+    function appendBotBubble(answer, sources = []) {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble bot';
 
-      // Format linebreaks nicely into paragraphs
+      // Format multi-line paragraphs cleanly
       const paragraphs = answer.split(/\n\n+/).filter(p => p.trim().length > 0);
       let html = '';
       paragraphs.forEach(p => {
         html += `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
       });
 
-      // Render sources if available
+      // Render Retrieved References if present
       if (sources && sources.length > 0) {
         html += `
-      <div class="sources-container">
-        <div class="sources-header">📚 Retrieved References:</div>
-    `;
+          <div class="chat-sources-box">
+            <div class="sources-title">📚 Retrieved Knowledge Citations:</div>
+        `;
         sources.slice(0, 3).forEach(s => {
-          const cropInfo = s.crop && s.crop !== 'N/A' ? ` | Crop: ${escapeHtml(s.crop)}` : '';
-          const stateInfo = s.state && s.state !== 'N/A' ? ` | State: ${escapeHtml(s.state)}` : '';
-          html += `<div class="source-item"><strong>${escapeHtml(s.source)}</strong>${cropInfo}${stateInfo}</div>`;
+          const crop = s.crop && s.crop !== 'N/A' ? ` | Crop: ${escapeHtml(s.crop)}` : '';
+          const state = s.state && s.state !== 'N/A' ? ` | State: ${escapeHtml(s.state)}` : '';
+          html += `<div class="source-chip"><strong>${escapeHtml(s.source)}</strong>${crop}${state}</div>`;
         });
         html += `</div>`;
       }
 
-      div.innerHTML = html;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
+      bubble.innerHTML = html;
+      drawerMessages.appendChild(bubble);
+      drawerMessages.scrollTop = drawerMessages.scrollHeight;
     }
 
     function escapeHtml(str) {
@@ -817,6 +2164,55 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    /* --------------------------------------------------------------------------
+       E. VOICE INPUT (SPEECH-TO-TEXT FOR FARMER CONVENIENCE)
+       -------------------------------------------------------------------------- */
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-IN'; // Optimized for Indian English & agriculture queries
+
+      let isListening = false;
+
+      voiceBtn.addEventListener('click', () => {
+        if (!isListening) {
+          try {
+            recognition.start();
+            isListening = true;
+            voiceBtn.classList.add('listening');
+          } catch (e) {
+            console.error('Speech recognition error', e);
+          }
+        } else {
+          recognition.stop();
+          isListening = false;
+          voiceBtn.classList.remove('listening');
+        }
+      });
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        drawerInput.value = transcript;
+        voiceBtn.classList.remove('listening');
+        isListening = false;
+        handleDrawerSend();
+      };
+
+      recognition.onerror = () => {
+        voiceBtn.classList.remove('listening');
+        isListening = false;
+      };
+
+      recognition.onend = () => {
+        voiceBtn.classList.remove('listening');
+        isListening = false;
+      };
+    } else {
+      voiceBtn.style.display = 'none';
     }
   </script>
 </body>

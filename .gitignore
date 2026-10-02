@@ -1,10 +1,15 @@
 # Environment variables and secrets
 .env
+.env.*
 *.env
 !.env.example
 
+# Dependencies & Node
+node_modules/
+
 # Virtual environments
 venv/
+.venv/
 venv_cpu/
 env/
 ENV/
@@ -13,10 +18,23 @@ venv.bak/
 
 # Python cache and bytecode
 __pycache__/
+*.pyc
 *.py[cod]
 *$py.class
 *.so
 .pytest_cache/
+
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+
+# Logs and local databases
+*.log
+logs/
+*.sqlite
+*.sqlite3
+local.db
 
 # Archives and redundant zip files
 archive*.zip
@@ -35,3 +53,4 @@ ehthumbs.db
 
 # Jupyter checkpoint files
 .ipynb_checkpoints/
+
