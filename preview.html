@@ -2081,7 +2081,8 @@
 
       try {
         // EXACT backend call matching server.py: POST /chat with { query, history }
-        const response = await fetch('/chat', {
+        const apiUrl = window.location.protocol.startsWith('http') ? '/chat' : 'http://localhost:8000/chat';
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
