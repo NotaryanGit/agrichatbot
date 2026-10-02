@@ -31,8 +31,8 @@ load_dotenv()
 PERSIST_DIRECTORY = Path(os.getenv("PERSIST_DIRECTORY", "db/faiss_index"))
 EMBEDDING_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 TOP_K = int(os.getenv("TOP_K", "4"))
-SCORE_THRESHOLD = float(os.getenv("SCORE_THRESHOLD", "0.2"))
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+FALLBACK_GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 SYSTEM_PROMPT = """You are KrishiMitra, an expert and trustworthy agricultural AI assistant for Indian farmers.
 Answer the user's question accurately and helpfully.
@@ -149,15 +149,19 @@ Response format: ONLY return a valid JSON object.
         )
         return json.loads(response.choices[0].message.content)
     except Exception as e:
-        print(f"[Warning] Failed to extract filters via Groq: {e}. Falling back to default.")
-        return {
-            "state": None,
-            "district": None,
-            "crop": None,
-            "season": None,
-            "year": None,
-            "is_general_knowledge": True
-        }
+        print(f"[Warning] Groq filter extraction unavailable ({e}). Using offline extractor.")
+        try:
+            from offline_chatbot import extract_filters_offline
+            return extract_filters_offline(query)
+        except Exception:
+            return {
+                "state": None,
+                "district": None,
+                "crop": None,
+                "season": None,
+                "year": None,
+                "is_general_knowledge": True
+            }
 
 
 def retrieve_structured_documents(filters: Dict[str, Any], k: int = TOP_K) -> List[Any]:
@@ -322,9 +326,18 @@ def generate_answer(query: str, chat_history: Optional[List[Dict[str, str]]] = N
             "used_context": False,
         }
 
+    if os.getenv("OFFLINE_MODE", "false").lower() in ("true", "1", "yes"):
+        from offline_chatbot import generate_offline_answer
+        return generate_offline_answer(query, chat_history)
+
     # Build prompt and call LLM
-    prompt = build_rag_prompt(query, docs, chat_history)
-    answer = call_groq_llm(prompt)
+    try:
+        prompt = build_rag_prompt(query, docs, chat_history)
+        answer = call_groq_llm(prompt)
+    except Exception as e:
+        print(f"[Warning] Groq LLM failed ({e}). Falling back to Offline Engine...")
+        from offline_chatbot import generate_offline_answer
+        return generate_offline_answer(query, chat_history)
 
     sources = [
         {

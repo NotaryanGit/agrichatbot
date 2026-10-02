@@ -66,7 +66,13 @@ class ChatResponse(BaseModel):
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint to verify backend status."""
-    return {"status": "ok", "service": "KrishiMitra Backend"}
+    is_offline = os.getenv("OFFLINE_MODE", "false").lower() in ("true", "1", "yes")
+    return {
+        "status": "ok",
+        "service": "KrishiMitra Backend",
+        "mode": "offline" if is_offline else "online",
+        "vector_store": "ready"
+    }
 
 
 @app.post("/chat", response_model=ChatResponse)
