@@ -80,15 +80,21 @@ def get_vector_store() -> FAISS:
     return _vector_store
 
 
+def is_groq_configured() -> bool:
+    """Check if a valid, non-placeholder Groq API key is present."""
+    key = os.getenv("GROQ_API_KEY", "").strip()
+    return bool(key and not key.startswith("your_") and "placeholder" not in key.lower())
+
+
 def get_groq_client() -> Groq:
     global _groq_client
     if _groq_client is None:
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
+        if not is_groq_configured():
             raise ValueError(
-                "GROQ_API_KEY is not set in environment or .env file. "
-                "Please add GROQ_API_KEY=your_key in .env"
+                "GROQ_API_KEY is not configured or is a placeholder in .env. "
+                "Please add a valid Groq API key in .env or switch to OFFLINE_MODE=true."
             )
+        api_key = os.getenv("GROQ_API_KEY", "").strip()
         _groq_client = Groq(api_key=api_key)
     return _groq_client
 
@@ -124,7 +130,11 @@ def get_dataframes() -> Dict[str, pd.DataFrame]:
 
 
 def extract_filters_from_query(query: str) -> Dict[str, Any]:
-    """Query Groq to parse agricultural queries into structured search filters (JSON)."""
+    """Query Groq to parse agricultural queries into structured search filters (JSON), or use offline extractor."""
+    if not is_groq_configured():
+        from offline_chatbot import extract_filters_offline
+        return extract_filters_offline(query)
+
     try:
         client = get_groq_client()
         EXTRACT_PROMPT = """You are an AI assistant designed to extract search parameters from a user's agricultural question.
@@ -326,7 +336,7 @@ def generate_answer(query: str, chat_history: Optional[List[Dict[str, str]]] = N
             "used_context": False,
         }
 
-    if os.getenv("OFFLINE_MODE", "false").lower() in ("true", "1", "yes"):
+    if not is_groq_configured() or os.getenv("OFFLINE_MODE", "false").lower() in ("true", "1", "yes"):
         from offline_chatbot import generate_offline_answer
         return generate_offline_answer(query, chat_history)
 

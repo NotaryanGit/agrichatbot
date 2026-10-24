@@ -239,12 +239,14 @@ def retrieve_structured_documents(filters: Dict[str, Any], k: int = 4) -> List[D
 
 
 def check_ollama_status() -> bool:
-    """Check if local Ollama service is reachable."""
-    import urllib.request
+    """Check if local Ollama service is reachable on port 11434 with near-instant socket check."""
+    import socket
     try:
-        req = urllib.request.Request(f"{OLLAMA_URL}/models", headers={"User-Agent": "KrishiMitra"}, method="GET")
-        with urllib.request.urlopen(req, timeout=1.5) as resp:
-            return resp.status == 200
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.2)
+        res = s.connect_ex(("127.0.0.1", 11434))
+        s.close()
+        return res == 0
     except Exception:
         return False
 

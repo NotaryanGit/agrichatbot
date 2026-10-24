@@ -108,11 +108,11 @@
        2. PART 1: PROCEDURAL DANDELION INTRO (PURE BLACK • FEATHERY FAN UNITS)
        ========================================================================== */
     .intro-overlay {
+      display: none;
       position: fixed;
       inset: 0;
       z-index: 9999;
       background: #000000;
-      display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
@@ -314,8 +314,8 @@
     .app-wrapper {
       position: relative;
       z-index: 2;
-      opacity: 0;
-      transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 1;
+      transition: opacity 0.5s ease;
     }
 
     .app-wrapper.visible {
@@ -1229,6 +1229,7 @@
       color: var(--text-dim);
     }
 
+    @media (max-width: 768px) {
       .intro-brand-pill { padding: 4px 14px; font-size: 0.9rem; }
 
       /* Mobile: stack dandelion on top, text below, both centered */
@@ -3766,66 +3767,74 @@
     function finishIntro() {
       isBloomed = true;
       isBlooming = false;
-      introOverlay.classList.add('hidden');
-      appWrapper.classList.add('visible');
+      if (introOverlay) {
+        introOverlay.classList.add('hidden');
+        introOverlay.style.display = 'none';
+      }
+      if (appWrapper) appWrapper.classList.add('visible');
       sessionStorage.setItem('krishi_intro_seen', 'true');
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       setTimeout(initFarmTractorExperience, 350);
     }
 
     // Click anywhere listener for intro
-    introOverlay.addEventListener('click', triggerFastBloom);
+    if (introOverlay) {
+      introOverlay.addEventListener('click', triggerFastBloom);
+    }
 
     // Replay Dandelion Bloom button
-    replayIntroBtn.addEventListener('click', () => {
-      isBloomed = false;
-      isBlooming = false;
-      headScaleAnim = 1.0;
-      fanSpreadAnim = 1.0;
-      initDandelionModel();
+    if (replayIntroBtn) {
+      replayIntroBtn.addEventListener('click', () => {
+        isBloomed = false;
+        isBlooming = false;
+        headScaleAnim = 1.0;
+        fanSpreadAnim = 1.0;
+        resizeCanvas();
+        initDandelionModel();
 
-      if (introCenterInfo) introCenterInfo.style.opacity = '1';
-      introOverlay.classList.remove('hidden');
-      introOverlay.style.opacity = '1';
+        if (introCenterInfo) introCenterInfo.style.opacity = '1';
+        if (introOverlay) {
+          introOverlay.style.display = 'flex';
+          introOverlay.classList.remove('hidden');
+          introOverlay.style.opacity = '1';
+        }
 
-      // Reset tractor state for fresh arrival
-      isTractorInitialized = false;
-      hasBotLeaped = false;
-      const tractorRig = document.getElementById('tractorVehicleRig');
-      if (tractorRig) tractorRig.classList.remove('active');
-      const driverBot = document.getElementById('driverBotGroup');
-      if (driverBot) gsap.set(driverBot, { opacity: 1, scale: 1 });
+        // Reset tractor state for fresh arrival
+        isTractorInitialized = false;
+        hasBotLeaped = false;
+        const tractorRig = document.getElementById('tractorVehicleRig');
+        if (tractorRig) tractorRig.classList.remove('active');
+        const driverBot = document.getElementById('driverBotGroup');
+        if (driverBot) gsap.set(driverBot, { opacity: 1, scale: 1 });
 
-      // Re-animate welcome text
-      const wLines = document.querySelectorAll('.intro-welcome-text .welcome-line');
-      wLines.forEach(l => l.classList.remove('visible'));
-      wLines.forEach((l, i) => {
-        setTimeout(() => { l.classList.add('visible'); }, 300 + i * 350);
+        // Re-animate welcome text
+        const wLines = document.querySelectorAll('.intro-welcome-text .welcome-line');
+        wLines.forEach(l => l.classList.remove('visible'));
+        wLines.forEach((l, i) => {
+          setTimeout(() => { l.classList.add('visible'); }, 300 + i * 350);
+        });
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(renderDandelion);
       });
+    }
 
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(renderDandelion);
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      resizeCanvas();
-      initDandelionModel();
-      animationFrameId = requestAnimationFrame(renderDandelion);
-      initAmbientSeeds();
-
-      // Staggered fade-up for welcome text lines
-      const welcomeLines = document.querySelectorAll('.intro-welcome-text .welcome-line');
-      welcomeLines.forEach((line, i) => {
-        setTimeout(() => { line.classList.add('visible'); }, 300 + i * 350);
-      });
-
-      const seen = sessionStorage.getItem('krishi_intro_seen');
-      if (seen === 'true') {
+    // Initialize page immediately - never leave the screen black!
+    function initializePageExperience() {
+      if (appWrapper) appWrapper.classList.add('visible');
+      if (introOverlay) {
         introOverlay.classList.add('hidden');
-        appWrapper.classList.add('visible');
-        setTimeout(initFarmTractorExperience, 400);
+        introOverlay.style.display = 'none';
       }
-    });
+      initAmbientSeeds();
+      setTimeout(initFarmTractorExperience, 250);
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initializePageExperience);
+    } else {
+      initializePageExperience();
+    }
 
     /* --------------------------------------------------------------------------
        C. AMBIENT BACKGROUND FLOATING DANDELION SEEDS CANVAS (MAIN PAGE)
