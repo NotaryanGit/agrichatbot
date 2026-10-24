@@ -31,19 +31,23 @@ load_dotenv()
 PERSIST_DIRECTORY = Path(os.getenv("PERSIST_DIRECTORY", "db/faiss_index"))
 EMBEDDING_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 TOP_K = int(os.getenv("TOP_K", "4"))
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
-FALLBACK_GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+FALLBACK_GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 SYSTEM_PROMPT = """You are KrishiMitra, an expert and trustworthy agricultural AI assistant for Indian farmers.
-Answer the user's question accurately and helpfully.
+Answer the user's question accurately, clearly, and helpfully.
 
-Guidelines:
-1. Use simple, practical, and farmer-friendly language. Avoid unnecessary technical jargon.
-2. If agricultural context data is provided below, summarize and analyze it clearly to answer the user's question.
-3. If the question is a general agricultural query (e.g. general farming practices, pest control, soil care, or crop cultivation tips), you are encouraged to use your pre-trained agricultural knowledge to provide a comprehensive and helpful response, incorporating the provided context if relevant.
-4. If the question asks for specific localized statistics (such as crop yield, production, area, or weather details in a specific year, state, or district) and there is NOT enough relevant data in the provided context, politely state:
-   "I don't have reliable database statistics for that specific query in my current records. Please consult your local Krishi Vigyan Kendra (KVK) or agricultural extension officer."
-5. Do NOT make up crop yields, fertilizer dosages, or scheme eligibility criteria.
+Formatting & Response Guidelines:
+1. Use clean Markdown formatting:
+   - Use bold headings (### or **Topic**) to break down sections.
+   - Use bullet points for steps, dos & don'ts, or recommendations.
+   - Use bold for key numbers, seed names, and NPK dosages.
+2. Structure your answer logically:
+   - Provide a direct, practical summary first.
+   - Give actionable farming advice (e.g. soil preparation, sowing time, irrigation, organic pest management).
+3. If agricultural context data is provided below, synthesize and cite the relevant facts (e.g. crop yield, state, district statistics).
+4. Citations & References: At the end of your answer, if context records were provided, add a brief '📚 Sources Referenced' section summarizing the datasets or records used.
+5. Do NOT make up crop yields, fertilizer dosages, or scheme eligibility criteria if not confident.
 """
 
 # ---------- LAZY INITIALIZATION ----------
@@ -277,18 +281,30 @@ Helpful Answer:"""
 
 
 def call_groq_llm(prompt: str) -> str:
-    """Query Groq API with Llama-3.3."""
+    """Query Groq API with Llama-3.3 (with fallback models)."""
     client = get_groq_client()
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        max_tokens=600,
-        temperature=0.3,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    return response.choices[0].message.content
+    models_to_try = [GROQ_MODEL] + [m for m in FALLBACK_GROQ_MODELS if m != GROQ_MODEL]
+    last_err = None
+    for model_name in models_to_try:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                max_tokens=800,
+                temperature=0.3,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            last_err = e
+            # Re-raise auth errors immediately
+            if "invalid_api_key" in str(e).lower() or "authentication" in str(e).lower():
+                raise e
+            print(f"[Warning] Groq model '{model_name}' failed: {e}. Trying fallback...")
+            continue
+    raise last_err or RuntimeError("All Groq models failed to return a response.")
 
 
 # ---------- PUBLIC API ----------
@@ -354,10 +370,22 @@ def generate_answer(query: str, chat_history: Optional[List[Dict[str, str]]] = N
             "source": d.metadata.get("source", "Agricultural Dataset"),
             "state": d.metadata.get("state", "N/A"),
             "crop": d.metadata.get("crop", "N/A"),
-            "preview": d.page_content[:150]
+            "preview": d.page_content[:180].strip()
         }
         for d in docs
     ]
+
+    # Explicitly cite verified sources at the end of the answer if not already cited by LLM
+    if sources and "sources" not in answer.lower() and "references" not in answer.lower():
+        source_lines = []
+        for s in sources[:4]:
+            parts = [f"**{s['source']}**"]
+            if s.get("crop") and s["crop"] != "N/A":
+                parts.append(f"Crop: *{s['crop']}*")
+            if s.get("state") and s["state"] != "N/A":
+                parts.append(f"State: *{s['state']}*")
+            source_lines.append(f"- {' | '.join(parts)}")
+        answer += "\n\n### 📚 Verified Agricultural Sources Referenced:\n" + "\n".join(source_lines)
 
     return {
         "answer": answer,

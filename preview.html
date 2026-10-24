@@ -714,11 +714,85 @@
       width: 100%;
     }
 
-    .chat-bubble.bot p {
+    /* Enhanced Markdown & Typography in Bot Content */
+    .bot-content {
+      font-size: 0.94rem;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .bot-content h3, .bot-heading-3 {
+      font-family: var(--font-heading);
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: #22c55e;
+      margin: 1rem 0 0.45rem;
+      letter-spacing: -0.01em;
+    }
+
+    .bot-content h4, .bot-heading-4 {
+      font-family: var(--font-heading);
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: #86efac;
+      margin: 0.85rem 0 0.35rem;
+    }
+
+    .bot-content p {
       margin-bottom: 0.75rem;
     }
-    .chat-bubble.bot p:last-child {
+
+    .bot-content p:last-child {
       margin-bottom: 0;
+    }
+
+    .bot-content strong {
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    .bot-content em {
+      color: #a1a1aa;
+      font-style: italic;
+    }
+
+    .bot-list, .bot-ordered-list {
+      margin: 0.4rem 0 0.85rem 1.35rem;
+      padding: 0;
+    }
+
+    .bot-list li {
+      list-style-type: disc;
+      margin-bottom: 0.35rem;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .bot-ordered-list li {
+      list-style-type: decimal;
+      margin-bottom: 0.35rem;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .chat-inline-code {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #86efac;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .chat-code-block {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #e4e4e7;
     }
 
     .chat-bubble-footer {
@@ -755,40 +829,98 @@
       background: rgba(255, 255, 255, 0.08);
     }
 
-    /* Retrieved Sources Attribution Chips */
+    /* Retrieved Sources Attribution Box */
     .chat-sources-box {
-      margin-top: 0.85rem;
-      padding: 10px 14px;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 1rem;
+      padding: 12px 16px;
+      background: rgba(6, 26, 14, 0.45);
+      border: 1px solid rgba(34, 197, 94, 0.25);
       border-radius: var(--radius-md);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     }
 
     .sources-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #86efac;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 6px;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+    }
+
+    .sources-badge {
+      font-size: 0.65rem;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+    }
+
+    .sources-list {
+      display: flex;
+      flex-direction: column;
       gap: 6px;
     }
 
-    .source-chip {
-      display: inline-block;
-      font-size: 0.78rem;
-      color: var(--text-silver);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-subtle);
+    .source-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: var(--radius-sm);
-      padding: 3px 8px;
-      margin: 2px 4px 2px 0;
+      padding: 7px 10px;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
 
-    .source-chip strong {
+    .source-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .source-card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .source-name {
+      font-weight: 600;
       color: #FFFFFF;
+    }
+
+    .source-tag {
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .crop-tag {
+      background: rgba(234, 179, 8, 0.12);
+      border: 1px solid rgba(234, 179, 8, 0.28);
+      color: #fef08a;
+    }
+
+    .state-tag {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      color: #bfdbfe;
+    }
+
+    .source-preview {
+      margin-top: 4px;
+      font-size: 0.74rem;
+      color: var(--text-dim);
+      font-style: italic;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     /* Typing Indicator (3 Bouncing Dots) */
@@ -4063,28 +4195,110 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let raw = escapeHtml(text);
+
+      // Code blocks ```lang\ncode```
+      raw = raw.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre class="chat-code-block"><code>${code.trim()}</code></pre>`;
+      });
+
+      // Inline code `code`
+      raw = raw.replace(/`([^`]+)`/g, '<code class="chat-inline-code">$1</code>');
+
+      // Headings: ###, ##, #
+      raw = raw.replace(/^### (.*$)/gim, '<h4 class="bot-heading-4">$1</h4>');
+      raw = raw.replace(/^## (.*$)/gim, '<h3 class="bot-heading-3">$1</h3>');
+      raw = raw.replace(/^# (.*$)/gim, '<h3 class="bot-heading-3">$1</h3>');
+
+      // Bold & Italic
+      raw = raw.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      raw = raw.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      raw = raw.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      raw = raw.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+      // Process lists & paragraphs
+      const lines = raw.split('\n');
+      let inList = false;
+      let inOrderedList = false;
+      let out = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line) {
+          if (inList) { out.push('</ul>'); inList = false; }
+          if (inOrderedList) { out.push('</ol>'); inOrderedList = false; }
+          continue;
+        }
+
+        // Unordered list item (- or * or •)
+        const ulMatch = line.match(/^[-*•]\s+(.*)$/);
+        if (ulMatch) {
+          if (inOrderedList) { out.push('</ol>'); inOrderedList = false; }
+          if (!inList) { out.push('<ul class="bot-list">'); inList = true; }
+          out.push(`<li>${ulMatch[1]}</li>`);
+          continue;
+        }
+
+        // Ordered list item (1. or 2.)
+        const olMatch = line.match(/^\d+\.\s+(.*)$/);
+        if (olMatch) {
+          if (inList) { out.push('</ul>'); inList = false; }
+          if (!inOrderedList) { out.push('<ol class="bot-ordered-list">'); inOrderedList = true; }
+          out.push(`<li>${olMatch[1]}</li>`);
+          continue;
+        }
+
+        if (inList) { out.push('</ul>'); inList = false; }
+        if (inOrderedList) { out.push('</ol>'); inOrderedList = false; }
+
+        if (line.startsWith('<h3') || line.startsWith('<h4') || line.startsWith('<pre')) {
+          out.push(line);
+        } else {
+          out.push(`<p>${line}</p>`);
+        }
+      }
+
+      if (inList) out.push('</ul>');
+      if (inOrderedList) out.push('</ol>');
+
+      return out.join('');
+    }
+
     function appendBotBubble(answer, sources = []) {
       const row = document.createElement('div');
       row.className = 'chat-row bot';
 
-      const paragraphs = answer.split(/\n\n+/).filter(p => p.trim().length > 0);
-      let html = '';
-      paragraphs.forEach(p => {
-        html += `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
-      });
+      const formattedHtml = formatMarkdown(answer);
 
       // Render Retrieved References
+      let sourcesHtml = '';
       if (sources && sources.length > 0) {
-        html += `
+        sourcesHtml = `
           <div class="chat-sources-box">
-            <div class="sources-title">📚 Retrieved Knowledge Citations:</div>
+            <div class="sources-title">
+              <span>📚 Verified Data Citations & Sources Used</span>
+              <span class="sources-badge">${sources.length} record(s)</span>
+            </div>
+            <div class="sources-list">
         `;
-        sources.slice(0, 3).forEach(s => {
-          const crop = s.crop && s.crop !== 'N/A' ? ` | Crop: ${escapeHtml(s.crop)}` : '';
-          const state = s.state && s.state !== 'N/A' ? ` | State: ${escapeHtml(s.state)}` : '';
-          html += `<div class="source-chip"><strong>${escapeHtml(s.source)}</strong>${crop}${state}</div>`;
+        sources.forEach(s => {
+          const cropTag = s.crop && s.crop !== 'N/A' ? `<span class="source-tag crop-tag">🌾 ${escapeHtml(s.crop)}</span>` : '';
+          const stateTag = s.state && s.state !== 'N/A' ? `<span class="source-tag state-tag">📍 ${escapeHtml(s.state)}</span>` : '';
+          const previewText = s.preview ? `<div class="source-preview">"${escapeHtml(s.preview)}..."</div>` : '';
+          sourcesHtml += `
+            <div class="source-card">
+              <div class="source-card-header">
+                <span class="source-name">📄 ${escapeHtml(s.source)}</span>
+                ${cropTag}
+                ${stateTag}
+              </div>
+              ${previewText}
+            </div>
+          `;
         });
-        html += `</div>`;
+        sourcesHtml += `</div></div>`;
       }
 
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -4092,7 +4306,10 @@
       row.innerHTML = `
         <div class="chat-row-avatar">🌱</div>
         <div class="chat-bubble bot">
-          <div class="bot-content">${html}</div>
+          <div class="bot-content">
+            ${formattedHtml}
+            ${sourcesHtml}
+          </div>
           <div class="chat-bubble-footer">
             <span class="chat-timestamp">${timeStr}</span>
             <button class="btn-copy-msg" onclick="copyMessageText(this)" title="Copy Answer">
